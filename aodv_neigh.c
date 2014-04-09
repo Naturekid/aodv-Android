@@ -39,10 +39,12 @@ void neigh_write_unlock(void) {
 	write_unlock_bh(&neigh_lock);
 }
 
+//初始化邻居列表
 void init_aodv_neigh_list(void) {
 	aodv_neigh_list=NULL;
 }
 
+//删除邻居列表
 void delete_aodv_neigh_list(void) {
 	aodv_neigh *tmp_entry = aodv_neigh_list;
 	aodv_neigh *prev_entry = NULL;
@@ -54,12 +56,13 @@ void delete_aodv_neigh_list(void) {
 }
 
 
-
+//寻找指定邻居
 aodv_neigh *find_aodv_neigh(u_int32_t target_ip) {
 	aodv_neigh *tmp_neigh;
 	neigh_read_lock(); //find_aodv_neigh is used in packet_out.c (uncontrolled interruption)
 	tmp_neigh = aodv_neigh_list;
 
+	//遍历aodv_neigh_list找到指定邻居
 	while ((tmp_neigh != NULL) && (tmp_neigh->ip <= target_ip)) {
 		if (tmp_neigh->ip == target_ip) {
 
@@ -73,6 +76,7 @@ aodv_neigh *find_aodv_neigh(u_int32_t target_ip) {
 	return NULL;
 }
 
+//删除指定邻居
 int delete_aodv_neigh(u_int32_t ip) {
 	aodv_neigh *tmp_neigh;
 	aodv_route *tmp_route;
@@ -85,6 +89,7 @@ int delete_aodv_neigh(u_int32_t ip) {
 
 	while (tmp_neigh != NULL) {
 		if (tmp_neigh->ip == ip) {
+			//网络设备除了可以用name 表示以外，还可以用ifindex(interface index)表示，当网络设备注册时调用dev_new_index( )获取
 			index = tmp_neigh->dev->ifindex;
 
 			if (prev_neigh != NULL) {

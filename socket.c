@@ -26,9 +26,10 @@ int init_sock(struct socket *sock, u_int32_t ip, char *dev_name)
 
     //set the address we are sending from
     memset(&sin, 0, sizeof(sin));
+	//addr family is AF_INET means TCP/IP protocol family -- sin_family为AF_INET代表使用TCP/IP协议族
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = ip;
-    sin.sin_port = htons(AODVPORT);
+    sin.sin_port = htons(AODVPORT);//adov.h，the value is 654，其值为654
 
 	/*sock->sk->reuse = 1;
     sock->sk->allocation = GFP_ATOMIC;
@@ -39,11 +40,17 @@ int init_sock(struct socket *sock, u_int32_t ip, char *dev_name)
     sock->sk->sk_priority = GFP_ATOMIC;
 
     error = sock->ops->bind(sock, (struct sockaddr *) &sin, sizeof(struct sockaddr_in));
+	//bind the socket to paticular interface--为设备指定接口，绑定套接字，此后只有经过此接口接受到的packet会被该socket处理
+	//set interface name--设置接口名称
     strncpy(interface.ifr_ifrn.ifrn_name, dev_name, IFNAMSIZ);
 
+    //no English now--在vfs_read和vfs_write函数中，其参数buf指向的用户空间的内存地址，直接使用内核空间的指针，则会返回-EFALUT。
+    //需要通过set_fs()和get_fs()宏来改变内核对内存地址检查的处理方式
     oldfs = get_fs();
     set_fs(KERNEL_DS);          //thank to Soyeon Anh and Dinesh Dharmaraju for spotting this bug!
+    //bind the socket to paticular interface--确实将socket绑定到特定的接口上
     error = sock_setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, (char *) &interface, sizeof(interface)) < 0;
+	//regain old fs--恢复原本的内存地址检查处理方式
     set_fs(oldfs);
 
 
@@ -64,11 +71,13 @@ void close_sock()
         kfree(g_mesh_dev);
 }
 
-
+//
 int local_broadcast(u_int8_t ttl, void *data,const size_t datalen)
 {
 	aodv_dev *tmp_dev;
     struct msghdr msg;
+	//structure related to readv an writev,two members--iov_base means pointer to data,and iov_sie
+	//与readv和writev相关的结构体，两个成员，iov_base为指向数据的指针，iov_size为数据大小
     struct iovec iov;
     mm_segment_t oldfs;
     int len = 0;
@@ -83,8 +92,10 @@ int local_broadcast(u_int8_t ttl, void *data,const size_t datalen)
     sin.sin_port = htons((unsigned short) AODVPORT);
 
     //define the message we are going to be sending out
+    //数据包的目的地址
     msg.msg_name = (void *) &(sin);
     msg.msg_namelen = sizeof(sin);
+	//记录消息的内容
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
     msg.msg_control = NULL;
@@ -96,9 +107,11 @@ int local_broadcast(u_int8_t ttl, void *data,const size_t datalen)
 
     tmp_dev = g_mesh_dev;
 
+    //若tmp_dev及其socket不为空，并且可写数据区域大于数据大小
     if ((tmp_dev) && (tmp_dev->sock) && (sock_wspace(tmp_dev->sock->sk) >= datalen))
     {
     	//tmp_dev->sock->sk->broadcast = 1;
+    	//指定socket发送方式为广播?
 		sock_set_flag( tmp_dev->sock->sk,SOCK_BROADCAST);
 	#ifdef NOMIPS
 	//tmp_dev->sock->sk->protinfo.af_inet.uc_ttl = ttl;
@@ -110,6 +123,7 @@ int local_broadcast(u_int8_t ttl, void *data,const size_t datalen)
 		   oldfs = get_fs();
         set_fs(KERNEL_DS);
 
+		//发送消息
         len = sock_sendmsg(tmp_dev->sock, &msg,(size_t) datalen);
 
         if (len < 0)
@@ -161,13 +175,14 @@ int send_message(u_int32_t dst_ip, u_int8_t ttl, void *data, const size_t datale
 
     		}
 	tmp_dev = g_mesh_dev;
-
+    //g_mesh_dev与指定接口相对应???
     if (tmp_dev == NULL)
     {
         printk("Error sending! Unable to find interface!\n");
         return 0;
     }
 
+    //空间小于数据大小，无法发送。
     space = sock_wspace(tmp_dev->sock->sk);
 
     if (space < datalen)
@@ -177,7 +192,7 @@ int send_message(u_int32_t dst_ip, u_int8_t ttl, void *data, const size_t datale
     }
 
     //tmp_dev->sock->sk->broadcast = 0;
-    sock_reset_flag( tmp_dev->sock->sk,SOCK_BROADCAST);
+    //?????为何此处也为broadcast?    sock_reset_flag( tmp_dev->sock->sk,SOCK_BROADCAST);
     #ifdef NOMIPS
     //tmp_dev->sock->sk->protinfo.af_inet.uc_ttl = ttl;
    	 inet_sk(tmp_dev->sock->sk)->uc_ttl = ttl;
@@ -291,6 +306,7 @@ int send_ett_probe(u_int32_t dst_ip, void *data1, const size_t datalen1, void *d
     set_fs(oldfs);
     return 0;
 }
+
 
 
 

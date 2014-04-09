@@ -34,8 +34,10 @@ inline void timer_write_unlock(void) {
 	write_unlock_irqrestore(&timer_lock, flags);
 }
 
+//初始化timer 
 int init_timer_queue() {
 
+	//定期调用timer_queue_signal 函数
 	setup_timer(&aodv_timer, (void *) timer_queue_signal, 0);
 	timer_queue = NULL;
 	return 0;
@@ -51,15 +53,18 @@ static unsigned long tvtojiffies(struct timeval *value) {
 	usec /= 1000000 / HZ;
 	return HZ * sec + usec;
 }
-//鎵惧埌瓒呮椂浠诲姟:浠诲姟缁撴潫鏃堕棿灏忎簬鐜板湪鏃堕棿!
+
+//找到超时任务:任务结束时间小于现在时间!
 task *first_timer_due(u_int64_t currtime) {
 	task *tmp_task;
 
 	// lock Read
 	timer_write_lock();
+	//寻找第一个超时任务(任务按时间排序)
 	if (timer_queue != NULL) {
 
 		/* If pqe's time is in teh interval */
+		//找到超时任务
 		if (time_before((unsigned long) timer_queue->time,
 				(unsigned long)currtime)) {
 
@@ -85,6 +90,7 @@ void timer_queue_signal() {
 
 	// While there is still events that has timed out
 	while (tmp_task != NULL) {
+		//循环将所有超时的任务插入到task 队列中
 		insert_task_from_timer(tmp_task);
 		tmp_task = first_timer_due(currtime);
 	}
@@ -135,6 +141,8 @@ void update_timer_queue() {
 		}
 
 
+		//更新计时器的超时时间
+		//全局变量jiffies用来记录自系统启动以来产生的节拍的总数
 		mod_timer(&aodv_timer, jiffies + tvtojiffies(&delay_time));
 
 
@@ -145,6 +153,7 @@ void update_timer_queue() {
 	return;
 }
 
+//插入新的计时器
 void queue_timer(task * new_timer) {
 
 	task *prev_timer = NULL;
@@ -162,7 +171,8 @@ void queue_timer(task * new_timer) {
 		tmp_timer = tmp_timer->next;
 	}
 
-	if ((timer_queue == NULL) || (timer_queue == tmp_timer)) {
+	//将新timer 插入到合适的位置
+	if ((timer_queue == NULL) || (timer_queue == tmp_timer)) {//timer队列为空，或者新timer 的时间最早
 		new_timer->next = timer_queue;
 		timer_queue = new_timer;
 	} else {
@@ -189,6 +199,7 @@ void queue_timer(task * new_timer) {
  enough room for the data and copies that too
  ****************************************************/
 
+//插入简单的timer
 int insert_timer_simple(u_int8_t task_type, u_int64_t delay, u_int32_t ip) {
 	task *new_entry;
 
@@ -199,6 +210,7 @@ int insert_timer_simple(u_int8_t task_type, u_int64_t delay, u_int32_t ip) {
 		printk("Error allocating timer!\n");
 		return -ENOMEM;
 	}
+	
 	new_entry->src_ip = ip;
 	new_entry->dst_ip = ip;
 	new_entry->tos = NO_TOS;
@@ -208,6 +220,7 @@ int insert_timer_simple(u_int8_t task_type, u_int64_t delay, u_int32_t ip) {
 	return 0;
 }
 
+//插入有方向性的timer
 int insert_timer_directional(u_int8_t task_type, u_int64_t delay,
 		u_int8_t retries, u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 	task *new_timer = NULL;
@@ -226,10 +239,11 @@ int insert_timer_directional(u_int8_t task_type, u_int64_t delay,
 
 	if (delay != 0)
 		new_timer->time = getcurrtime() + delay;
-
-	else if (task_type == TASK_RESEND_RREQ) {
+	
+	else if (task_type == TASK_RESEND_RREQ) {//重发请求
 		new_timer->retries = retries;
 		new_timer->ttl = 30;
+		//这个时间是如何定出来的
 		new_timer->time = getcurrtime() + ((2 ^ (RREQ_RETRIES - retries))
 				* NET_TRAVERSAL_TIME);
 	} else
@@ -276,6 +290,7 @@ task *find_first_timer_queue_entry(void) {
  return tmp_entry;
  }*/
 
+//寻找指定任务，找到返回1，否则返回0
 int find_timer(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 		u_int8_t type) {
 	task *tmp_task;
@@ -296,6 +311,7 @@ int find_timer(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 	timer_read_unlock();
 	return 0;
 }
+
 
 /****************************************************
 
