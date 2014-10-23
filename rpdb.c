@@ -184,17 +184,23 @@ int rpdb_route(unsigned char type, int rt_table, unsigned char tos,
 	mm_segment_t oldfs;
 	struct socket *rt_socket;
 
+#ifdef DTN_HELLO
+	extern u_int32_t dtn_hello_ip;
+	if(ip_dst==dtn_hello_ip || ip_src==dtn_hello_ip) {
+		return 1;
+	}	
+#endif
+
 //#ifdef AODV_SIGNALLING
-#ifdef DEBUG
+#ifdef DEBUG0
 	char src[20];
 	char dst[20];
 	char nex[20];
 	strcpy(src, inet_ntoa(ip_src));
 	strcpy(dst, inet_ntoa(ip_dst));
 	strcpy(nex, inet_ntoa(ip_gw));
-	printk("RPDB: Adding or deleting a route %s to %s via %s\n", src, dst, nex);
+	printk("RPDB: Adding or deleting a route %s to %s via %s,type is %c\n", src, dst, nex,type);
 #endif
-
 	error = sock_create(AF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE, &rt_socket);
 	if (error < 0) {
 		printk("Error during creation of route socket; terminating, %d\n",

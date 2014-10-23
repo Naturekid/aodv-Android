@@ -39,12 +39,10 @@ void neigh_write_unlock(void) {
 	write_unlock_bh(&neigh_lock);
 }
 
-//初始化邻居列表
 void init_aodv_neigh_list(void) {
 	aodv_neigh_list=NULL;
 }
 
-//删除邻居列表
 void delete_aodv_neigh_list(void) {
 	aodv_neigh *tmp_entry = aodv_neigh_list;
 	aodv_neigh *prev_entry = NULL;
@@ -56,13 +54,12 @@ void delete_aodv_neigh_list(void) {
 }
 
 
-//寻找指定邻居
+
 aodv_neigh *find_aodv_neigh(u_int32_t target_ip) {
 	aodv_neigh *tmp_neigh;
 	neigh_read_lock(); //find_aodv_neigh is used in packet_out.c (uncontrolled interruption)
 	tmp_neigh = aodv_neigh_list;
 
-	//遍历aodv_neigh_list找到指定邻居
 	while ((tmp_neigh != NULL) && (tmp_neigh->ip <= target_ip)) {
 		if (tmp_neigh->ip == target_ip) {
 
@@ -73,10 +70,10 @@ aodv_neigh *find_aodv_neigh(u_int32_t target_ip) {
 	}
 
 	neigh_read_unlock();
+
 	return NULL;
 }
 
-//删除指定邻居
 int delete_aodv_neigh(u_int32_t ip) {
 	aodv_neigh *tmp_neigh;
 	aodv_route *tmp_route;
@@ -89,7 +86,6 @@ int delete_aodv_neigh(u_int32_t ip) {
 
 	while (tmp_neigh != NULL) {
 		if (tmp_neigh->ip == ip) {
-			//网络设备除了可以用name 表示以外，还可以用ifindex(interface index)表示，当网络设备注册时调用dev_new_index( )获取
 			index = tmp_neigh->dev->ifindex;
 
 			if (prev_neigh != NULL) {
@@ -101,7 +97,7 @@ int delete_aodv_neigh(u_int32_t ip) {
 			}
 
 			neigh_write_unlock();
-	
+
 			if (g_routing_metric != HOPS){ //deleting timers...
 				delete_timer(ip, ip, NO_TOS, TASK_SEND_ETT);
 				delete_timer(ip, ip, NO_TOS, TASK_ETT_CLEANUP);
@@ -112,22 +108,27 @@ int delete_aodv_neigh(u_int32_t ip) {
 					inet_ntoa(ip));
 #endif
 
+
+
+/** Cai:Del the following codes because they remove the route entry in kernel before
+  * managing the broken link. We should genarate rerr and send it out first,then just
+  * expires the route entry.
+**/
+/*
 			tmp_src_entry = find_src_list_entry(g_mesh_ip);
 			if (tmp_src_entry != NULL) {
 
 				int error = rpdb_route(RTM_DELROUTE, tmp_src_entry->rt_table,
 						NO_TOS, g_mesh_ip, ip, ip, index, 1);
 				if (error < 0) {
-					printk(
-							"Error sending with rtnetlink - Delete Route - err no: %d\n",
-							error);
+					printk("Error sending with rtnetlink - Delete Route - err no: %d\n",error);
 
 				}
-			}
+			}*/
 			
-			tmp_route = find_aodv_route(g_mesh_ip, ip, 0);
-					if (tmp_route)
-						remove_aodv_route(tmp_route);
+			//tmp_route = find_aodv_route(g_mesh_ip, ip, 0);
+			//		if (tmp_route)
+			//			remove_aodv_route(tmp_route);      
 
 			kfree(tmp_neigh);
 			gen_rerr(ip);
@@ -179,7 +180,7 @@ void cleanup_neigh_routes() {
 	}
 }
 
-aodv_neigh *create_aodv_neigh(u_int32_t ip) {
+aodv_neigh *create_aodv_neigh(u_int32_t neigh_name,u_int32_t ip) {
 	aodv_neigh *new_neigh;
 	aodv_neigh *prev_neigh = NULL;
 	aodv_neigh *tmp_neigh = NULL;
@@ -217,7 +218,9 @@ aodv_neigh *create_aodv_neigh(u_int32_t ip) {
 	}
 			
 	neigh_write_lock(); //to avoid conflicts with read_neigh_proc and packet_out.c (uncontrolled interruption)
-
+#ifdef DEBUGC
+	new_neigh->neigh_name = neigh_name;
+#endif
 	new_neigh->ip = ip;
 	new_neigh->lifetime = 0;
 	new_neigh->etx_metric = new_neigh->recv_rate = 0; 
@@ -225,6 +228,7 @@ aodv_neigh *create_aodv_neigh(u_int32_t ip) {
 	new_neigh->dev = g_mesh_dev->dev;
 	new_neigh->next = NULL;
 	
+
 	//ETX metric initialization
 	new_neigh->etx.count=0;
 	new_neigh->etx.send_etx=0;
@@ -248,6 +252,7 @@ aodv_neigh *create_aodv_neigh(u_int32_t ip) {
 	for (i=0;i<NEIGH_TABLESIZE; i++)
 		new_neigh->load_metric.neigh_tx[i] = 0;
 
+
 	if (prev_neigh == NULL) {
 		new_neigh->next = aodv_neigh_list;
 		aodv_neigh_list = new_neigh;
@@ -265,6 +270,7 @@ aodv_neigh *create_aodv_neigh(u_int32_t ip) {
 		insert_timer_simple(TASK_ETT_CLEANUP, ETT_INTERVAL * (1 + ALLOWED_ETT_LOSS) + 100,ip);
 		update_timer_queue();
 	}
+
 	
 	return new_neigh;
 }
@@ -274,7 +280,6 @@ int route_aodv_neigh(u_int32_t neigh_ip) {
 	aodv_route *tmp_route;
 	int error; 
 	tmp_route = create_aodv_route(g_mesh_ip, neigh_ip, 0, g_local_route->dst_id);
-
 	if (tmp_route == NULL) 
 		return 0;
 	
@@ -287,8 +292,7 @@ int route_aodv_neigh(u_int32_t neigh_ip) {
 	
 	tmp_src_entry = find_src_list_entry(g_mesh_ip);
 		if (tmp_src_entry == NULL)
-			return 0;
-	
+			return 0;	
 	error = rpdb_route(RTM_NEWROUTE, tmp_src_entry->rt_table, 0, g_mesh_ip,
 			neigh_ip, neigh_ip, g_mesh_dev->index, 1);
 

@@ -45,6 +45,7 @@
 #include <linux/netfilter_ipv4.h>
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <net/netfilter/nf_queue.h>
+#include <linux/netdevice.h>
 
 #include <linux/spinlock.h>
 #include <linux/sysctl.h>
@@ -67,15 +68,33 @@
 #include <net/icmp.h>
 #include <net/route.h>
 
-//#define DEBUG 0
-#define AODVPORT		654
+
+#define DTN_LOCATION_PORT 	10003
+#define AODV_LOCATION_PORT	10004         
+#define TASK_DTN_HELLO        121
+#define DTN_HELLO
+//remove it when test end,in aodv.h, aove_thread.c , task_queue.c
+#define RECOVERYPATH 
+#define DTN
+//#define DEBUG
+#define CaiDebug
+#define DEBUGC
+//#define DEBUG0
+#define extention               667
+#define DTNREGISTER		9999
+#define DTNPORT			10000
+#define GET_DTN_HELLO           10001
+#define RE_DTN_HELLO		10002
+#define AODVPORT		5002
 #define TRUE			1
 #define FALSE 			0
-
+#define BLACKLIST               111
+#define REPAIR			333
 // See section 10 of the AODV draft
 // Times in milliseconds
-#define ACTIVE_ROUTE_TIMEOUT 	3000
-#define ALLOWED_HELLO_LOSS 	10 //MCC - Changed to increment the possibility of having a bad ETX metric
+#define ACTIVE_ROUTE_TIMEOUT 	4800
+#define BRK_LINK_TIMEOUT        60000  //2 * ACTIVE_ROUTE_TIMEOUT
+#define ALLOWED_HELLO_LOSS 	3 //MCC - Changed to increment the possibility of having a bad ETX metric
 #define BLACKLIST_TIMEOUT 	RREQ_RETRIES * NET_TRAVERSAL_TIME
 #define DELETE_PERIOD         ALLOWED_HELLO_LOSS * HELLO_INTERVAL
 #define HELLO_INTERVAL        1000
@@ -96,6 +115,9 @@
 #define TTL_INCREMENT 		 2
 #define TTL_THRESHOLD         7
 #define TTL_VALUE             3
+
+////////DTTL means DTN TTL//////////
+#define DTTL			15
 
 //ST Gateway Definitions
 #define ST_INTERVAL           10000
@@ -145,7 +167,7 @@
 #define ETT 1 // ETT metric
 #define WCIM 2 //WCIM metric
 #define NUM_TOS 9
-#define NO_TOS 0x00 
+#define NO_TOS 0x00
 #define ZERO_LOAD 0
 #define ZERO_SIZE 0
 #define DEFAULT_ROUTE_TABLE 254 //MAIN ROUTE TABLE - Used for default routes
@@ -174,6 +196,13 @@
 #define TASK_RECV_HELLO	129
 #define RREP_MESSAGE	130
 #define TASK_RECV_RREP	130
+
+//EX-AODV
+#define RCVP_MESSAGE    122
+#define TASK_RECV_RCVP  122
+#define RRDP_MESSAGE    123
+#define TASK_RECV_RRDP  123
+
 //ST-AODV
 #define TASK_ST             106
 #define TASK_GW_CLEANUP     107
@@ -194,6 +223,9 @@
 #define TASK_SEND_RREP 125
 
 #define TASK_UPDATE_LOAD 131
+
+#define TASK_GEN_RREQ 132
+
 //Packet Definitions
 /////////////////////////////
 //ST- RREQ
@@ -223,6 +255,10 @@ typedef struct {
 	u_int32_t gw_ip;
 	u_int32_t dst_id;
 	u_int32_t path_metric;
+
+#ifdef DTN_HELLO
+	u_int8_t dttl;//used to find DTN neighbor
+#endif
 
 } rreq_st;
 //
@@ -257,6 +293,10 @@ typedef struct {
 	u_int32_t dst_id;
 	u_int32_t path_metric;
 
+#ifdef DTN_HELLO
+	u_int8_t dttl;//used to find DTN neighbor
+#endif
+
 } rreq;
 //
 
@@ -287,6 +327,12 @@ typedef struct {
 	u_int32_t path_metric;
 	u_int32_t src_id;
 
+#ifdef DTN_HELLO
+	u_int8_t dttl;//used to find DTN neighbor
+	u_int32_t x;
+	u_int32_t y;
+#endif
+
 } rrep;
 //
 
@@ -309,6 +355,10 @@ typedef struct {
 	unsigned int dst_count :8;
 	u_int32_t dst_ip;
 	u_int32_t dst_id;
+#ifdef DTN
+	u_int32_t last_avail_ip;
+	u_int32_t src_ip;
+#endif
 
 } rerr;
 //
@@ -345,15 +395,90 @@ typedef struct {
 #else
 	//#error "Please fix <asm/byteorder.h>"
 #endif
+
+#ifdef DEBUGC
+	u_int32_t nodename;
+#endif
 	u_int8_t neigh_count;
 	u_int8_t num_hops;
 	u_int8_t reserved2;
-	u_int8_t load; 
-	u_int16_t load_seq; 
+	u_int8_t load;
+	u_int16_t load_seq;
 
 } hello;
 //
 
+
+#ifdef RECOVERYPATH
+//////////////////////////////
+//Recovery Path Message		    //
+//////////////////////////////
+typedef struct {
+
+	u_int8_t type;
+	u_int8_t num_hops;
+#ifdef __BIG_ENDIAN_BITFIELD
+	unsigned int n:1;
+	unsigned int reserved:7;
+#elif defined __LITTLE_ENDIAN_BITFIELD
+	unsigned int reserved :7;
+	unsigned int n :1;
+#else
+	//#error "Please fix <asm/byteorder.h>"
+#endif
+	unsigned int dst_count :8;
+	u_int32_t dst_ip;
+	u_int32_t dst_id;
+	u_int32_t src_ip;
+#ifdef DTN
+	u_int32_t last_avail_ip;
+#endif
+
+} rcvp;
+//
+//Route Redirection Packet
+typedef struct {
+
+	u_int8_t type;
+	u_int8_t num_hops;
+#ifdef __BIG_ENDIAN_BITFIELD
+	unsigned int n:1;
+	unsigned int reserved:7;
+#elif defined __LITTLE_ENDIAN_BITFIELD
+	unsigned int reserved :7;
+	unsigned int n :1;
+#else
+	//#error "Please fix <asm/byteorder.h>"
+#endif
+	unsigned int dst_count :8;
+	u_int32_t dst_ip;
+	//u_int32_t dst_id;	
+	u_int32_t src_ip;
+	unsigned char tos;
+} rrdp;
+
+//Break Link Entry
+struct _brk_link {
+
+	u_int64_t lifetime;
+	u_int32_t last_hop;
+
+	u_int32_t dst_ip;
+	u_int32_t src_ip;
+	u_int32_t dst_id;
+
+	u_int8_t state :2;
+
+//#ifdef DTN
+	u_int32_t last_avail_ip;
+//#endif
+
+	struct _brk_link *next;
+	struct _brk_link *prev;
+};
+typedef struct _brk_link brk_link;
+//
+#endif
 
 //MCC - ETT Metric Implementation Messages
 //Stuffing of 24 bytes - Necessary to form the probe packets
@@ -432,13 +557,16 @@ struct _task {
 
 	//MCC - Implementation
 	unsigned char tos;
-	
+
 	unsigned char src_hw_addr[ETH_ALEN];
 	unsigned int data_len;
 	void *data;
 
 	struct _task *next;
 	struct _task *prev;
+
+//control task
+	struct _task *prev_control;
 
 };
 typedef struct _task task;
@@ -488,6 +616,7 @@ struct _aodv_dev {
 	struct socket *sock;
 	u_int16_t load_seq;
 	u_int8_t load;
+	struct _aodv_dev *next;
 };
 typedef struct _aodv_dev aodv_dev;
 //
@@ -530,10 +659,13 @@ typedef struct _load_params{
 
 //AODV_NEIGH
 struct _aodv_neigh {
+#ifdef DEBUGC
+	u_int32_t neigh_name; 
+#endif
 	u_int32_t ip;
 	u_int64_t lifetime;
 	struct net_device *dev;
-	
+
 	//MCC - Implementation
 	etx_params etx;
 	ett_params ett;
@@ -541,7 +673,7 @@ struct _aodv_neigh {
     u_int16_t recv_rate;
     u_int16_t send_rate;
     u_int8_t etx_metric;
-	struct _aodv_neigh *next; 
+	struct _aodv_neigh *next;
 };
 typedef struct _aodv_neigh aodv_neigh;
 //
@@ -617,5 +749,12 @@ struct services {
 #include "timer_queue.h"
 #include "utils.h"
 #include "tos.h"
+
+//#ifdef RECOVERYPATH
+
+#include "brk_list.h"
+#include "rcvp.h"
+
+//#endif
 
 #endif

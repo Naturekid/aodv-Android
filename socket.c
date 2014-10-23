@@ -26,10 +26,9 @@ int init_sock(struct socket *sock, u_int32_t ip, char *dev_name)
 
     //set the address we are sending from
     memset(&sin, 0, sizeof(sin));
-	//addr family is AF_INET means TCP/IP protocol family -- sin_family为AF_INET代表使用TCP/IP协议族
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = ip;
-    sin.sin_port = htons(AODVPORT);//adov.h，the value is 654，其值为654
+    sin.sin_port = htons(AODVPORT);
 
 	/*sock->sk->reuse = 1;
     sock->sk->allocation = GFP_ATOMIC;
@@ -40,17 +39,11 @@ int init_sock(struct socket *sock, u_int32_t ip, char *dev_name)
     sock->sk->sk_priority = GFP_ATOMIC;
 
     error = sock->ops->bind(sock, (struct sockaddr *) &sin, sizeof(struct sockaddr_in));
-	//bind the socket to paticular interface--为设备指定接口，绑定套接字，此后只有经过此接口接受到的packet会被该socket处理
-	//set interface name--设置接口名称
     strncpy(interface.ifr_ifrn.ifrn_name, dev_name, IFNAMSIZ);
 
-    //no English now--在vfs_read和vfs_write函数中，其参数buf指向的用户空间的内存地址，直接使用内核空间的指针，则会返回-EFALUT。
-    //需要通过set_fs()和get_fs()宏来改变内核对内存地址检查的处理方式
     oldfs = get_fs();
     set_fs(KERNEL_DS);          //thank to Soyeon Anh and Dinesh Dharmaraju for spotting this bug!
-    //bind the socket to paticular interface--确实将socket绑定到特定的接口上
     error = sock_setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, (char *) &interface, sizeof(interface)) < 0;
-	//regain old fs--恢复原本的内存地址检查处理方式
     set_fs(oldfs);
 
 
@@ -71,13 +64,11 @@ void close_sock()
         kfree(g_mesh_dev);
 }
 
-//
+
 int local_broadcast(u_int8_t ttl, void *data,const size_t datalen)
 {
 	aodv_dev *tmp_dev;
     struct msghdr msg;
-	//structure related to readv an writev,two members--iov_base means pointer to data,and iov_sie
-	//与readv和writev相关的结构体，两个成员，iov_base为指向数据的指针，iov_size为数据大小
     struct iovec iov;
     mm_segment_t oldfs;
     int len = 0;
@@ -92,10 +83,8 @@ int local_broadcast(u_int8_t ttl, void *data,const size_t datalen)
     sin.sin_port = htons((unsigned short) AODVPORT);
 
     //define the message we are going to be sending out
-    //数据包的目的地址
     msg.msg_name = (void *) &(sin);
     msg.msg_namelen = sizeof(sin);
-	//记录消息的内容
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
     msg.msg_control = NULL;
@@ -105,13 +94,16 @@ int local_broadcast(u_int8_t ttl, void *data,const size_t datalen)
     msg.msg_iov->iov_len = (__kernel_size_t) datalen;
     msg.msg_iov->iov_base = (char *) data;
 
-    tmp_dev = g_mesh_dev;
+    //tmp_dev = g_mesh_dev;
+	extern aodv_dev* net_dev_list;
+	tmp_dev = net_dev_list;
+	
 
-    //若tmp_dev及其socket不为空，并且可写数据区域大于数据大小
+    while(tmp_dev){
+
     if ((tmp_dev) && (tmp_dev->sock) && (sock_wspace(tmp_dev->sock->sk) >= datalen))
     {
     	//tmp_dev->sock->sk->broadcast = 1;
-    	//指定socket发送方式为广播?
 		sock_set_flag( tmp_dev->sock->sk,SOCK_BROADCAST);
 	#ifdef NOMIPS
 	//tmp_dev->sock->sk->protinfo.af_inet.uc_ttl = ttl;
@@ -123,17 +115,329 @@ int local_broadcast(u_int8_t ttl, void *data,const size_t datalen)
 		   oldfs = get_fs();
         set_fs(KERNEL_DS);
 
-		//发送消息
         len = sock_sendmsg(tmp_dev->sock, &msg,(size_t) datalen);
 
         if (len < 0)
             printk("Error sending! err no: %d,on interface: %s\n", len, tmp_dev->dev->name);
         set_fs(oldfs);
-   }
+
+	tmp_dev = tmp_dev->next;
+   }//endif
+   }//endwhile
 
     return len;
 }
 
+#ifdef DTN
+
+static int bind_to_device(struct socket *sock, char *ifname)//get local ip,bind with socket
+{
+    struct net *net;
+    struct net_device *dev;
+    __be32 addr;
+    struct sockaddr_in sin;
+    int err;
+    net = sock_net(sock->sk);
+    dev = __dev_get_by_name(net, ifname);
+
+    if (!dev) {
+        printk(KERN_ALERT "No such device named %s\n", ifname);
+        return -ENODEV;
+    }
+    addr = inet_select_addr(dev, 0, RT_SCOPE_UNIVERSE);
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = addr;
+    sin.sin_port = 0;
+    err = sock->ops->bind(sock, (struct sockaddr*)&sin, sizeof(sin));
+    if (err < 0) {
+        printk(KERN_ALERT "sock bind err, err=%d\n", err);
+        return err;
+    }
+    return 0;
+}
+static int connect_to_addr(struct socket *sock, u_int32_t dstip)//get aim ip and port, connect it with socket
+{
+    struct sockaddr_in daddr;
+    int err;
+    daddr.sin_family = AF_INET;
+    daddr.sin_addr.s_addr = dstip;
+
+//    daddr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+//	inet_aton(ser_ip, &(daddr.sin_addr.s_addr));
+//    printk("0x%lx\n",INADDR_BROADCAST);
+    daddr.sin_port = DTNPORT;
+    err = sock->ops->connect(sock, (struct sockaddr*)&daddr,
+            sizeof(struct sockaddr), 0);
+    if (err < 0) {
+        printk("sock connect err, err=%d\n", err);
+        return err;
+    }
+    return 0;
+}
+/**
+ * send RRER info to DTN
+ * @dst_ip:断路的目的地
+ * @last_avail_ip:
+ */
+/*
+int send2dtn(void * data){
+
+	u_int32_t dst_ip = ((u_int32_t *)data)[0];
+	u_int32_t last_avail_ip = ((u_int32_t *)data)[1];
+	int datalen = 12;
+//#ifdef DEBUG
+	char s1[16],s2[16];
+	strcpy(s1, inet_ntoa(dst_ip));
+	strcpy(s2, inet_ntoa(last_avail_ip));
+	printk("send RRER info to DTN, dst: %s, last_avail: %s\n", s1, s2);
+//#endif
+
+
+
+    struct msghdr msg;
+    struct iovec iov;
+    aodv_dev *tmp_dev;
+    mm_segment_t oldfs;
+    u_int32_t space;
+    int len;
+
+    aodv_neigh *tmp_neigh;
+
+
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = g_mesh_ip;
+    sin.sin_port = htons((unsigned short) DTNPORT);
+
+    //define the message we are going to be sending out
+    msg.msg_name = (void *) &(sin);
+    msg.msg_namelen = sizeof(sin);
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = MSG_DONTWAIT | MSG_NOSIGNAL;
+    msg.msg_iov->iov_len = (__kernel_size_t) datalen;
+    msg.msg_iov->iov_base = data;
+#ifdef DEBUG
+    printk("%x\n", ((u_int32_t *)data)[0]);
+    printk("%x\n", ((u_int32_t *)data)[1]);
+#endif
+	tmp_dev = g_mesh_dev;
+
+    if (tmp_dev == NULL)
+    {
+        printk("Error sending! Unable to find interface!\n");
+        return 0;
+    }
+
+    space = sock_wspace(tmp_dev->sock->sk);
+
+    if (space < datalen)
+    {
+        printk("Space: %d, Data: %d \n", space, (int)datalen);
+        return 0;
+    }
+
+    oldfs = get_fs();
+    set_fs(KERNEL_DS);
+
+    len = sock_sendmsg(tmp_dev->sock, &msg,(size_t) datalen);
+    if (len < 0)
+    {
+        printk("Error sending! err no: %d, Dst: %s\n", len, inet_ntoa(dst_ip));
+    }
+    set_fs(oldfs);
+    return 0;
+}
+*/
+
+//Cai Bingying : overwrite the above function to a function with four paras
+//it's used in sending rerr and rcvp to DTN
+int send2dtn(void * data,unsigned short port){
+
+	int datalen = 24;
+	//printk("send to DTN\n");
+
+
+    	u_int32_t src_ip = ((u_int32_t *)data)[0];
+	u_int32_t dst_ip = ((u_int32_t *)data)[1];
+	u_int32_t last_avail_ip = ((u_int32_t *)data)[2];
+	u_int32_t type = ((u_int32_t *)data)[3];
+	//int datalen = 18;
+
+#ifdef DEBUG
+	char s1[16],s2[16],s3[16];
+	strcpy(s1, inet_ntoa(dst_ip));
+	strcpy(s2, inet_ntoa(last_avail_ip));
+	strcpy(s3, inet_ntoa(src_ip));
+	printk("send RRER, RCVP or DTN neigh info to DTN, dst: %s, last_avail: %s,src: %s,type:%s\n", s1, s2, s3,inet_ntoa(type));
+#endif
+
+
+
+    struct msghdr msg;
+    struct iovec iov;
+    aodv_dev *tmp_dev;
+    mm_segment_t oldfs;
+    u_int32_t space;
+    int len;
+
+    aodv_neigh *tmp_neigh;
+
+
+
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+
+    sin.sin_addr.s_addr = g_mesh_ip;
+    sin.sin_port = htons((unsigned short) port);
+
+    //sin.sin_port = htons((unsigned short) DTNPORT);
+
+
+    //define the message we are going to be sending out
+    msg.msg_name = (void *) &(sin);
+    msg.msg_namelen = sizeof(sin);
+    msg.msg_iov = &iov;
+
+
+    msg.msg_iovlen = 1;
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = MSG_DONTWAIT | MSG_NOSIGNAL;
+
+    msg.msg_iov->iov_len = (__kernel_size_t) datalen;
+    msg.msg_iov->iov_base = data;
+#ifdef DEBUG
+
+    printk("%x\n", ((u_int32_t *)data)[0]);
+    printk("%x\n", ((u_int32_t *)data)[1]);
+    printk("%x\n", ((u_int32_t *)data)[2]);
+#endif
+	tmp_dev = g_mesh_dev;
+
+
+    if (tmp_dev == NULL)
+    {
+        printk("Error sending! Unable to find interface!\n");
+
+        return 0;
+    }
+
+    space = sock_wspace(tmp_dev->sock->sk);
+
+
+    if (space < datalen)
+    {
+
+        printk("Space: %d, Data: %d \n", space, (int)datalen);
+        return 0;
+    }
+
+
+    oldfs = get_fs();
+    set_fs(KERNEL_DS);
+
+    len = sock_sendmsg(tmp_dev->sock, &msg,(size_t) datalen);
+
+    if (len < 0)
+    {
+        printk("Error sending! err no: %d, Dst: %s\n", len, inet_ntoa(dst_ip));
+
+    }
+    set_fs(oldfs);
+
+    return 0;
+}
+
+int query_location(unsigned short port){
+
+	int datalen = 16;
+	
+	char str[16];
+	strcpy(str,"Query Location");
+	
+	void *data = (void *)str;
+
+
+#ifdef CaiDebug
+	char s1[16];
+	strcpy(s1, (char *)data);
+	printk("query the location of node:%s\n", s1);
+#endif
+
+
+
+    struct msghdr msg;
+    struct iovec iov;
+    aodv_dev *tmp_dev;
+    mm_segment_t oldfs;
+    u_int32_t space;
+    int len;
+
+    aodv_neigh *tmp_neigh;
+
+
+
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+
+    sin.sin_addr.s_addr = g_mesh_ip;
+    sin.sin_port = htons((unsigned short) port);
+
+    //sin.sin_port = htons((unsigned short) DTNPORT);
+
+
+    //define the message we are going to be sending out
+    msg.msg_name = (void *) &(sin);
+    msg.msg_namelen = sizeof(sin);
+    msg.msg_iov = &iov;
+
+    msg.msg_iovlen = 1;
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = MSG_DONTWAIT | MSG_NOSIGNAL;
+
+    msg.msg_iov->iov_len = (__kernel_size_t) datalen;
+    msg.msg_iov->iov_base = data;
+
+    tmp_dev = g_mesh_dev;
+
+
+    if (tmp_dev == NULL)
+    {
+        printk("Error sending! Unable to find interface!\n");
+
+        return 0;
+    }
+
+    space = sock_wspace(tmp_dev->sock->sk);
+
+
+    if (space < datalen)
+    {
+
+        printk("Space: %d, Data: %d \n", space, (int)datalen);
+        return 0;
+    }
+
+
+    oldfs = get_fs();
+    set_fs(KERNEL_DS);
+
+    len = sock_sendmsg(tmp_dev->sock, &msg,(size_t) datalen);
+
+    if (len < 0)
+    {
+        printk("Error sending!\n");
+
+    }
+    set_fs(oldfs);
+    return 0;
+
+}
+#endif
 
 int send_message(u_int32_t dst_ip, u_int8_t ttl, void *data, const size_t datalen)
 {
@@ -175,14 +479,13 @@ int send_message(u_int32_t dst_ip, u_int8_t ttl, void *data, const size_t datale
 
     		}
 	tmp_dev = g_mesh_dev;
-    //g_mesh_dev与指定接口相对应???
+
     if (tmp_dev == NULL)
     {
         printk("Error sending! Unable to find interface!\n");
         return 0;
     }
 
-    //空间小于数据大小，无法发送。
     space = sock_wspace(tmp_dev->sock->sk);
 
     if (space < datalen)
@@ -192,7 +495,7 @@ int send_message(u_int32_t dst_ip, u_int8_t ttl, void *data, const size_t datale
     }
 
     //tmp_dev->sock->sk->broadcast = 0;
-    //?????为何此处也为broadcast?    sock_reset_flag( tmp_dev->sock->sk,SOCK_BROADCAST);
+    sock_reset_flag( tmp_dev->sock->sk,SOCK_BROADCAST);
     #ifdef NOMIPS
     //tmp_dev->sock->sk->protinfo.af_inet.uc_ttl = ttl;
    	 inet_sk(tmp_dev->sock->sk)->uc_ttl = ttl;
@@ -306,7 +609,6 @@ int send_ett_probe(u_int32_t dst_ip, void *data1, const size_t datalen1, void *d
     set_fs(oldfs);
     return 0;
 }
-
 
 
 

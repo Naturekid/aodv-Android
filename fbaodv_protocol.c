@@ -20,6 +20,23 @@ u_int8_t g_aodv_gateway;
 u_int8_t g_routing_metric;
 u_int32_t g_fixed_rate;
 
+#ifdef DEBUGC
+u_int32_t g_node_name;
+#endif
+
+//#ifdef DEBUGC
+//struct aodv_dev *g_eth_dev;
+//#endif
+
+////////////////////
+//dtn hello ip
+#ifdef DTN_HELLO
+u_int32_t dtn_hello_ip;
+u_int32_t longitude;
+u_int32_t latitude;
+#endif
+
+
 // KR: 08/23/05
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Miguel Catalan Cid");
@@ -27,6 +44,8 @@ MODULE_DESCRIPTION("A AODV ad-hoc routing kernel module: Flow-based and WCIM rou
 
 extern struct timer_list aodv_timer;
 extern struct aodv_route *aodv_route_table;
+////////////brk_list/////////////
+extern struct brk_link *brk_list;
 
 struct nf_hook_ops input_filter;
 struct nf_hook_ops output_filter;
@@ -39,6 +58,24 @@ char *network_ip;
 unsigned int aodv_gateway;
 char g_aodv_dev[8];
 u_int32_t g_null_ip;
+int node_type;//wireless=0,wired=1,IMN=2
+int dev_num;
+
+#ifdef BLACKLIST
+	char * aodv_blacklist[10];
+	char * dtn_blacklist[10];
+	u_int32_t aodv_blacklist_ip[10];
+	u_int32_t dtn_blacklist_ip[10];
+	int aodv_blacksize = 0;
+	int dtn_blacksize = 0;
+	module_param_array(aodv_blacklist, charp, &aodv_blacksize, 0644);
+	module_param_array(dtn_blacklist, charp, &dtn_blacksize, 0644);
+#endif
+
+#ifdef DTN
+int dtn_register = 0;
+
+#endif
 
 static struct proc_dir_entry *aodv_dir, *route_table_proc, *neigh_proc,
 		*gw_proc, *timers_proc, *node_load_proc, *sources_proc,
@@ -61,6 +98,17 @@ module_param(nominal_rate,uint,0);
 static int __init init_fbaodv_module(void) {
 	char *tmp_str = NULL;
 	inet_aton("0.0.0.0", &g_null_ip);
+
+#ifdef DTN_HELLO
+	//inet_aton("192.168.2.2",&dtn_hello_ip);
+	inet_aton("127.127.127.127",&dtn_hello_ip);
+	//printk("%s",inet_ntoa(dtn_hello_ip));
+	longitude = 0;
+	latitude = 0;
+#endif
+
+
+
 
 	if (mesh_dev==NULL)
 	{
@@ -92,39 +140,7 @@ static int __init init_fbaodv_module(void) {
 		g_routing_metric = HOPS;
 		printk("Hop count routing\n\n");
 	}
-
-	else if (strcmp(routing_metric, "ETT") == 0) {
-		g_routing_metric = ETT;
-		printk("ETT routing: Expected Transmission Time\n\n");
-		
-		if (nominal_rate && get_nominalrate(nominal_rate))
-			g_fixed_rate = nominal_rate;
-		
-		if (!nominal_rate || g_fixed_rate == 0) {
-				g_fixed_rate = 0;
-				printk("Nominal rate estimation using packet-pair probe messages: ACTIVE\n\n");
-		}
-		else
-			printk("Nominal rate estimation using packet-pair probe messages: INACTIVE\n\n");
-
-	}
-	else if (strcmp(routing_metric, "WCIM") == 0) {
-		g_routing_metric = WCIM;
-		printk("WCIM routing: Weighted Contention and Interference Model\n\n");
-		
-		if (nominal_rate && get_nominalrate(nominal_rate))
-					g_fixed_rate = nominal_rate;
-				
-		if (!nominal_rate || g_fixed_rate == 0) {
-					g_fixed_rate = 0;
-					printk("Nominal rate estimation using packet-pair probe messages: ACTIVE\n\n");
-		}
-		else
-					printk("Nominal rate estimation using packet-pair probe messages: INACTIVE\n\n");
-
-
-	}
-
+	//delete the metrics of ETT & WCIM
 	
 	if (network_ip!=NULL)
 	{
@@ -145,8 +161,33 @@ static int __init init_fbaodv_module(void) {
 			return(-1);
 	}
 	
+#ifdef BLACKLIST
+	if (aodv_blacksize) {
+		printk("AODV BLACK LIST:\n");
+		int k;
+		for (k = 0; k < aodv_blacksize; k++) {
+			printk("           %s\n", aodv_blacklist[k]);
+			inet_aton(aodv_blacklist[k], &aodv_blacklist_ip[k]);
+		}
+	}
+	if (dtn_blacksize) {
+		printk("DTN BLACK LIST:\n");
+		int k;
+		for (k = 0; k < dtn_blacksize; k++) {
+			printk("           %s\n", dtn_blacklist[k]);
+			inet_aton(dtn_blacklist[k], &dtn_blacklist_ip[k]);
+		}
+	}
+#endif
+
+
 
 	init_aodv_route_table();
+#ifdef RECOVERYPATH
+        ///////////brk_list//////////////
+	init_brk_list();
+#endif
+
 	init_task_queue();
 	init_timer_queue();
 	init_aodv_neigh_list();
@@ -155,13 +196,63 @@ static int __init init_fbaodv_module(void) {
 	init_gw_list();
 	init_flow_type_table();
 
+
 	printk("\n*Initialicing mesh device  - %s\n", mesh_dev);	
-	if (init_aodv_dev(mesh_dev))
-		goto out1;
-	
+	extern aodv_dev* net_dev_list;
+	net_dev_list = NULL;
+	dev_num = 0;
+	//if (init_aodv_dev(mesh_dev))
+//	if(init_net_dev(mesh_dev))
+//		goto out1;
+//printk("---------------init adhoc0-------------------\n");
 
+//#ifdef DEBUGC
+     //try to get net list when initialling.
+	struct net_device *pdev;
+	struct list_head *dev_base = &(init_net.dev_base_head);
+	//struct list_head *phead;
+	struct in_device *ip;
+	struct in_ifaddr *ifaddr;
+	//int i ;
+	list_for_each_entry(pdev,dev_base,dev_list)//list_for_each(phead,&dev_base)
+	{
+		if( ((pdev->name[0]=='e')&&(pdev->name[1]=='t')&&(pdev->name[2]=='h')) ||
+			(strcmp(pdev->name,"adhoc0")==0) )
+		{
+			char dev_name[IFNAMSIZ];
+			strcpy(dev_name,pdev->name);
+			if(init_net_dev(dev_name))
+				continue;
+			dev_num ++;
+			printk("------------------------------------\ndev->name:%s\ndev->ifindex:%d\ndev->type:%d\ndev->dev_id:%d\n----------------------------------\n",pdev->name,pdev->ifindex,pdev->type,pdev->dev_id);
+			
+			
+		}
+
+		/*
+		//i =0;
+		ip = pdev->ip_ptr;
+		ifaddr = ip->ifa_list;
+		while(ifaddr){
+			printk("-------ip:%s---------\n",inet_ntoa(ifaddr->ifa_address));
+			ifaddr = ifaddr->ifa_next;
+		//	printk("=========iiiiiii:%d========\n",i++);
+		}
+		//printk("ip:%s\n",inet_ntoa(ip->ifa_list->ifa_address));
+		
+		if(strcmp(pdev->name,"eth0")==0){
+			char eth_dev[8];
+			printk("=========iiiiiii========\n");
+			strcpy(eth_dev,pdev->name);
+			printk("=========istgreii========\n");
+			init_eth_dev(eth_dev);
+		}
+		*/
+	}
+
+
+//#endif
 	startup_aodv();
-
 
 	if (g_aodv_gateway) {
 		printk("initiating st_rreq dissemination\n");
@@ -172,6 +263,7 @@ static int __init init_fbaodv_module(void) {
 	insert_timer_simple(TASK_HELLO, HELLO_INTERVAL,g_mesh_ip );
 	insert_timer_simple(TASK_GW_CLEANUP, ACTIVE_GWROUTE_TIMEOUT, g_mesh_ip);
 	insert_timer_simple(TASK_CLEANUP, HELLO_INTERVAL+HELLO_INTERVAL/2, g_mesh_ip);
+
 	update_timer_queue();
 
 	aodv_dir = proc_mkdir("fbaodv",NULL);

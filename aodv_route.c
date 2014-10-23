@@ -208,8 +208,13 @@ int flush_aodv_route_table() {
 									error);
 
 					}
-					if (tmp_entry->num_routes <= 0)
+					//if (tmp_entry->num_routes <= 0)
+						//delete_src_list_entry(tmp_route->src_ip);
+					/*CaiBingying:When the src_list_entry is local node,do not delete it 							however for it having a self route any time,delete it may 							cause failure of new neighbors setting up*/
+					if ((tmp_entry->num_routes <= 0) && (tmp_entry->ip!=g_mesh_ip))
 						delete_src_list_entry(tmp_route->src_ip);
+					else if((tmp_entry->num_routes <= 0) && (tmp_entry->ip==g_mesh_ip))
+						tmp_entry->num_routes = 1;
 
 				}
 
@@ -398,13 +403,16 @@ int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 #ifdef DEBUG
 		 	printk("Replacing Route\n");
 	#endif
-		 	error = rpdb_route(RTM_DELROUTE, tmp_src_entry->rt_table,
-		 					tmp_route->tos, tmp_route->src_ip, tmp_route->dst_ip,
-		 					tmp_route->next_hop, tmp_route->dev->index,
-		 					tmp_route->num_hops);
-		 	if (error < 0) {
-		 		printk ("Error sending with rtnetlink - Delete Route - err no: %d\n", error);
-		 		return 0;
+
+
+			
+			 error = rpdb_route(RTM_DELROUTE, tmp_src_entry->rt_table,
+			 				tmp_route->tos, tmp_route->src_ip, tmp_route->dst_ip,
+			 				tmp_route->next_hop, tmp_route->dev->index,
+			 				tmp_route->num_hops);
+			 if (error < 0) {
+			 	printk ("Error sending with rtnetlink - Delete Route - err no: %d\n", error);
+			 	return 0;
 		 	}
 		}
 	 }
@@ -446,31 +454,32 @@ int rrep_aodv_route(aodv_route *rep_route){
 		return 0;
 	}
 	
+
 	error = rpdb_route(RTM_NEWROUTE, tmp_src_entry->rt_table,
 			rep_route->tos, rep_route->src_ip, rep_route->dst_ip,
 			rep_route->next_hop, rep_route->dev->index,
 			rep_route->num_hops);
-	if (error < 0) {
-		 				printk(
-		 						"Error sending with rtnetlink - Delete Route - err no: %d\n",
-		 						error);
-		 				return 0;
-		 			}
 	
-		route_write_lock(); //lifetime and route_valid are modified or read in packet_out.c - avoid conflicts
-		rep_route->state = REPLIED;
-		rep_route->lifetime = getcurrtime() + DELETE_PERIOD;
-		route_write_unlock();
-		ipq_send_ip(rep_route->src_ip, rep_route->dst_ip, rep_route->tos);
+	if (error < 0) {
+		printk("Error sending with rtnetlink - Delete Route - err no: %d\n",error);
+		return 0;
+	}
+
+	
+	route_write_lock(); //lifetime and route_valid are modified or read in packet_out.c - avoid conflicts
+	rep_route->state = REPLIED;
+	rep_route->lifetime = getcurrtime() + DELETE_PERIOD;
+	route_write_unlock();
+	ipq_send_ip(rep_route->src_ip, rep_route->dst_ip, rep_route->tos);
 	
 #ifdef DEBUG
-		strcpy(src, inet_ntoa(rep_route->src_ip));
-		strcpy(dst, inet_ntoa(rep_route->dst_ip));
+	strcpy(src, inet_ntoa(rep_route->src_ip));
+	strcpy(dst, inet_ntoa(rep_route->dst_ip));
 
-		printk("Installing route from %s ", src);
-		printk("to %s with ToS %u - Next Hop: %s - path_metric: %u\n", dst, rep_route->tos, inet_ntoa(rep_route->next_hop),rep_route->path_metric);
+	printk("Installing route from %s ", src);
+	printk("to %s with ToS %u - Next Hop: %s - path_metric: %u\n", dst, rep_route->tos, inet_ntoa(rep_route->next_hop),rep_route->path_metric);
 #endif
-		return 1;
+	return 1;
 }
 
 aodv_route *find_aodv_route(u_int32_t src_ip, u_int32_t dst_ip,
@@ -533,6 +542,38 @@ aodv_route *find_aodv_route_by_id(u_int32_t dst_ip, u_int32_t dst_id) {
 	route_read_unlock();
 	return NULL;
 }
+
+#ifdef RECOVERYPATH
+int is_overlapped_with_route(brk_link *tmp_link) {
+
+	aodv_route *tmp_route;
+	/*lock table */
+	route_read_lock(); //to avoid conflicts in packet_out.c (uncontrolled interruption)
+
+	tmp_route = aodv_route_table;
+
+	while ((tmp_route != NULL) && (tmp_route->dst_ip < tmp_link->last_avail_ip)) { //serching GW_IP (sorted by dst_ip)
+		tmp_route = tmp_route->next;
+	}
+
+	if ((tmp_route == NULL) || (tmp_route->dst_ip != tmp_link->last_avail_ip)) { //not found!
+		route_read_unlock();
+		return 0;
+	}
+
+	else {
+		while ((tmp_route != NULL) && (tmp_route->dst_ip == tmp_link->last_avail_ip)) {
+			if ( tmp_route->src_ip == tmp_link->src_ip ) {
+				route_read_unlock();
+				return 1;
+			}
+			tmp_route = tmp_route->next;
+		}
+	}
+	route_read_unlock();
+	return 0;
+}
+#endif
 
 int read_route_table_proc(char *buffer, char **buffer_location, off_t offset,
 		int buffer_length, int *eof, void *data) {

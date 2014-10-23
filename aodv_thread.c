@@ -55,6 +55,7 @@ void aodv(void) {
 	atomic_set(&kill_thread, 0);
 	atomic_set(&aodv_is_dead, 0);
 
+
 	//Name our thread
 	/*lock_kernel();
 	 sprintk(current->comm, "aodv-mcc");
@@ -81,9 +82,23 @@ void aodv(void) {
 		}
 		//While the buffer is not empty
 		while ((tmp_task = get_task()) != NULL) {
+			
+			u_int32_t dst;
 
 			//takes a different action depending on what type of event is recieved
 			switch (tmp_task->type) {
+
+			//remove following case when DTN hell test end
+			case TASK_DTN_HELLO:
+				inet_aton("127.127.127.127",&dst);
+				//extern u_int32_t dtn_hello_ip;
+				gen_rreq(g_mesh_ip,dst,tmp_task->tos);
+#ifdef CaiDebug
+				printk("-------DTN HELLO TASK---------\n");
+#endif
+				//insert_timer_simple(TASK_DTN_HELLO, 300*HELLO_INTERVAL, g_mesh_ip);
+				//update_timer_queue();
+				break;
 
 			//RREP
 			case TASK_RECV_RREP:
@@ -93,14 +108,30 @@ void aodv(void) {
 
 				//RERR
 			case TASK_RECV_RERR:
+				//printk("-----------\nget RERR from %s----------\n",inet_ntoa(tmp_task->src_ip));
 				recv_rerr(tmp_task);
 				kfree(tmp_task->data);
 				break;
 
 			case TASK_RECV_HELLO:
+				//printk("get HELLO from %s\n",inet_ntoa(tmp_task->src_ip));
 				recv_hello(tmp_task);
 				kfree(tmp_task->data);
 				break;
+
+           		 /****************添加接收到通路包的任务***************/
+			#ifdef RECOVERYPATH
+            		case TASK_RECV_RCVP:
+               			//printk("Receive a RCVP\n");
+               			recv_rcvp(tmp_task);
+                		kfree(tmp_task->data);
+                		break;
+			case TASK_RECV_RRDP:
+               			//printk("Receive a RRDP\n");
+               			recv_rrdp(tmp_task);
+                		kfree(tmp_task->data);
+                		break;
+			#endif
 
 				//Cleanup  the Route Table and Flood ID queue
 			case TASK_CLEANUP:
@@ -108,21 +139,23 @@ void aodv(void) {
 				break;
 
 			case TASK_HELLO:
+				//printk("gen HELLO\n");
 				gen_hello();
 				break;
 
 			case TASK_ST:
 				gen_st_rreq();
 				break;
-			
+
 			case TASK_GW_CLEANUP:
 				update_gw_lifetimes();
 				insert_timer_simple(TASK_GW_CLEANUP, ACTIVE_GWROUTE_TIMEOUT,
 						g_mesh_ip);
 				update_timer_queue();
 				break;
-			
+
 			case TASK_NEIGHBOR:
+			//printk("get NEIGHBOR TASH,delete neigh %s\n",inet_ntoa(tmp_task->src_ip));
 			delete_aodv_neigh(tmp_task->src_ip);
 				break;
 
@@ -148,22 +181,22 @@ void aodv(void) {
 				printk("Reseting ETT-Info from neighbour %s\n",
 						inet_ntoa(tmp_task->src_ip));
 				break;
-				
+
 			case TASK_NEIGHBOR_2H:
 				delete_aodv_neigh_2h(tmp_task->src_ip);
 				break;
-					
+
 			case TASK_RECV_RREQ:
 				recv_rreq(tmp_task);
 				kfree(tmp_task->data);
 				break;
-					
-		
+
+
 			case TASK_RESEND_RREQ:
 				resend_rreq(tmp_task);
 				break;
-				
-			
+
+
 			case TASK_ETT_INFO:
 				recv_ett_info(tmp_task);
 				kfree(tmp_task->data);
@@ -171,16 +204,20 @@ void aodv(void) {
 			case TASK_SEND_RREP:
 				gen_rrep(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos);
 				break;
-		
+
 			case TASK_RECV_STRREQ:
 				recv_rreq_st(tmp_task);
 				kfree(tmp_task->data);
 				break;
-				
+
 			case TASK_UPDATE_LOAD:
 				update_my_load();
 				break;
-	
+
+			case TASK_GEN_RREQ:
+				gen_rreq(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos);
+				break;
+
 			default:
 				break;
 			}

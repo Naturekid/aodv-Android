@@ -1,0 +1,20 @@
+1.try to get all devs and set up a dev list--just contains the eth* and adhoc0
+
+
+2.modified the data structure of aodv_dev in adov.h:add next ptr
+get all devs in fbaodv_protocol.c
+
+3.change init aodv dev to init wireless & wired dev
+  use init_net_dev,create_net_dev,insert_net_dev
+ and add a global var called net_dev_list---contain all devs
+
+4.modified the data structure of aodv_dev in adov.h:add nodename
+
+
+5.modified local_broadcast in socket.c
+
+  broadcast wireless and wired
+the g_local_route is binding to the first inited dev
+
+6.let the diff ip but same node has two entry in his neighbor's neigh_list.c
+
