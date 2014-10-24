@@ -16,5 +16,5 @@
 
 int gen_hello(void);
 int recv_hello(task * tmp_packet);
-void compute_etx(void);
+//void compute_etx(void);
 #endif

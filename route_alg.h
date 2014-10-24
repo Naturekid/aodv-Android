@@ -8,6 +8,6 @@
 #include "aodv.h"
 
 u_int8_t compute_coef(u_int16_t size, u_int16_t rate);
-int wcim_metric(aodv_neigh *tmp_neigh, rreq *tmp_rreq);
-int ett_metric(aodv_neigh *tmp_neigh, rreq *tmp_rreq);
+//int wcim_metric(aodv_neigh *tmp_neigh, rreq *tmp_rreq);
+//int ett_metric(aodv_neigh *tmp_neigh, rreq *tmp_rreq);
 #endif

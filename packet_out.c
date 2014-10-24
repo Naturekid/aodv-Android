@@ -109,8 +109,10 @@ unsigned int output_handler(unsigned int hooknum, struct sk_buff *skb,
 	else{
 		if (tmp_route->state==REPLIED) {
 			tmp_route->state = ACTIVE;
+/*
 			if (g_routing_metric == WCIM)
 				insert_timer_simple(TASK_UPDATE_LOAD, 1, g_mesh_ip);
+*/
 		}
 		tmp_route->lifetime = getcurrtime() + ACTIVE_ROUTE_TIMEOUT;
 #ifdef DEBUG

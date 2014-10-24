@@ -119,7 +119,7 @@ void aodv(void) {
 				kfree(tmp_task->data);
 				break;
 
-           		 /****************Ìí¼Ó½ÓÊÕµ½Í¨Â·°üµÄÈÎÎñ***************/
+           		 /****************ï¿½ï¿½Ó½ï¿½ï¿½Õµï¿½Í¨Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½***************/
 			#ifdef RECOVERYPATH
             		case TASK_RECV_RCVP:
                			//printk("Receive a RCVP\n");
@@ -163,25 +163,6 @@ void aodv(void) {
 				flush_aodv_route_table();
 				break;
 
-			case TASK_SEND_ETT:
-				send_probe(tmp_task->dst_ip);
-				break;
-				//A small probe packet is received
-			case TASK_RECV_S_ETT:
-				recv_sprobe(tmp_task);
-				kfree(tmp_task->data);
-				break;
-				//A large probe packet is received
-			case TASK_RECV_L_ETT:
-				recv_lprobe(tmp_task);
-				kfree(tmp_task->data);
-				break;
-			case TASK_ETT_CLEANUP:
-				reset_ett(find_aodv_neigh(tmp_task->src_ip));
-				printk("Reseting ETT-Info from neighbour %s\n",
-						inet_ntoa(tmp_task->src_ip));
-				break;
-
 			case TASK_NEIGHBOR_2H:
 				delete_aodv_neigh_2h(tmp_task->src_ip);
 				break;
@@ -196,11 +177,6 @@ void aodv(void) {
 				resend_rreq(tmp_task);
 				break;
 
-
-			case TASK_ETT_INFO:
-				recv_ett_info(tmp_task);
-				kfree(tmp_task->data);
-				break;
 			case TASK_SEND_RREP:
 				gen_rrep(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos);
 				break;

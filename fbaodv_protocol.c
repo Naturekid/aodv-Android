@@ -299,9 +299,10 @@ static int __init init_fbaodv_module(void) {
 #ifdef KERNEL2_6_26
 	reliability_proc->owner=THIS_MODULE;
 #endif
-
+/*
 	ett_proc=create_proc_read_entry("bw_estimation", 0, aodv_dir, read_ett_list_proc, NULL);
 	if (ett_proc == NULL) goto out2;
+*/
 #ifdef KERNEL2_6_26
 	ett_proc->owner=THIS_MODULE;
 #endif

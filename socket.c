@@ -176,7 +176,7 @@ static int connect_to_addr(struct socket *sock, u_int32_t dstip)//get aim ip and
 }
 /**
  * send RRER info to DTN
- * @dst_ip:断路的目的地
+ * @dst_ip:锟斤拷路锟斤拷目锟侥碉拷
  * @last_avail_ip:
  */
 /*
@@ -515,7 +515,7 @@ int send_message(u_int32_t dst_ip, u_int8_t ttl, void *data, const size_t datale
     return 0;
 }
 
-
+/*
 int send_ett_probe(u_int32_t dst_ip, void *data1, const size_t datalen1, void *data2, const size_t datalen2){
 
     struct msghdr msg1, msg2;
@@ -609,7 +609,7 @@ int send_ett_probe(u_int32_t dst_ip, void *data1, const size_t datalen1, void *d
     set_fs(oldfs);
     return 0;
 }
-
+*/
 
 
 

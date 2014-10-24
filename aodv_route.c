@@ -229,10 +229,10 @@ int flush_aodv_route_table() {
 		
 
 	}
-
+/*
 	if (g_routing_metric == WCIM)
 		update_my_load();
-
+*/
 	insert_timer_simple(TASK_CLEANUP, HELLO_INTERVAL, g_mesh_ip);
 	update_timer_queue();
 	return 0;
@@ -430,12 +430,13 @@ int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 	tmp_route->state = ACTIVE;
 
 	route_write_unlock();
-			
+/*			
 	if (g_routing_metric == WCIM){
 		tmp_route->load = compute_load(next_hop->send_rate, tmp_route->tos);
 		if (previous_state == ACTIVE)
 			update_my_load();
 	}		
+*/
 	return 1;
 }
 int rrep_aodv_route(aodv_route *rep_route){

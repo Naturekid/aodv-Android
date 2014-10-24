@@ -98,16 +98,6 @@ int delete_aodv_neigh(u_int32_t ip) {
 
 			neigh_write_unlock();
 
-			if (g_routing_metric != HOPS){ //deleting timers...
-				delete_timer(ip, ip, NO_TOS, TASK_SEND_ETT);
-				delete_timer(ip, ip, NO_TOS, TASK_ETT_CLEANUP);
-				update_timer_queue();
-			}
-#ifdef DEBUG
-			printk("deleting reliability and ett info for neighbor - %s\n",
-					inet_ntoa(ip));
-#endif
-
 
 
 /** Cai:Del the following codes because they remove the route entry in kernel before
@@ -228,31 +218,14 @@ aodv_neigh *create_aodv_neigh(u_int32_t neigh_name,u_int32_t ip) {
 	new_neigh->dev = g_mesh_dev->dev;
 	new_neigh->next = NULL;
 	
-
+/*
 	//ETX metric initialization
 	new_neigh->etx.count=0;
 	new_neigh->etx.send_etx=0;
 	new_neigh->etx.recv_etx=0;
-
-	//ETT initilization
-	new_neigh->ett.count_rcv = 0;
-	new_neigh->ett.last_count = 0;
-	new_neigh->ett.ett_window = ETT_PROBES_MIN+1; //initial window
-	new_neigh->ett.sec = 0;
-	new_neigh->ett.usec = 0;
-	new_neigh->ett.meas_delay = DEFAULT_ETT_METRIC;
-	delay_vector_init(&new_neigh->ett.recv_delays[0]);
-	new_neigh->ett.reset = 0;
-	new_neigh->ett.interval=ETT_FAST_INTERVAL;
-	new_neigh->ett.fixed_rate=0;
+*/
+//there are something about metric del by cai at 20141023
 	
-	//needed for WCIM
-	new_neigh->load_metric.load = 0;
-	new_neigh->load_metric.load_seq = 0;
-	for (i=0;i<NEIGH_TABLESIZE; i++)
-		new_neigh->load_metric.neigh_tx[i] = 0;
-
-
 	if (prev_neigh == NULL) {
 		new_neigh->next = aodv_neigh_list;
 		aodv_neigh_list = new_neigh;
@@ -262,14 +235,6 @@ aodv_neigh *create_aodv_neigh(u_int32_t neigh_name,u_int32_t ip) {
 	}
 	
 	neigh_write_unlock();
-
-	if (g_routing_metric != HOPS){
-		get_random_bytes(&rand, sizeof (rand));
-		jitter = (u_int64_t)((rand*ip)%2000); 
-		insert_timer_simple(TASK_SEND_ETT, 1000 + 10*jitter, ip);
-		insert_timer_simple(TASK_ETT_CLEANUP, ETT_INTERVAL * (1 + ALLOWED_ETT_LOSS) + 100,ip);
-		update_timer_queue();
-	}
 
 	
 	return new_neigh;
@@ -413,58 +378,7 @@ return len;
 
 
 
-int read_ett_list_proc(char *buffer, char **buffer_location, off_t offset,
-		int buffer_length, int *eof, void *data) {
-	char tmp_buffer[200];
-	aodv_neigh *tmp_neigh =aodv_neigh_list;
-	int len;
-	u_int64_t currtime;
-
-	currtime=getcurrtime();
-
-	
-	neigh_read_lock();
-	sprintf(
-			buffer,
-			"\nAODV Neighbors\n---------------------------------------------------------------------------------------------------------------------------\n");
-	sprintf(
-			tmp_buffer,
-			"      IP      |Send Rate|Recv Rate| Meas Delay|Count ETT|ETT Window|Fixed Rate|\n");
-	strcat(buffer, tmp_buffer);
-	sprintf(
-			tmp_buffer,
-			"---------------------------------------------------------------------------------------------------------------------------\n");
-	strcat(buffer, tmp_buffer);
-	while (tmp_neigh!=NULL) {
-	
-		sprintf(tmp_buffer, "  %-16s", inet_ntoa(tmp_neigh->ip));
-		strcat(buffer, tmp_buffer);
-
-		sprintf(
-				tmp_buffer,
-				"%5u   %5u    %7u     %2d     %2d    %1d\n",
-				tmp_neigh->send_rate, tmp_neigh->recv_rate, tmp_neigh->ett.meas_delay,
-				tmp_neigh->ett.count_rcv, tmp_neigh->ett.ett_window, tmp_neigh->ett.fixed_rate);
-		strcat(buffer, tmp_buffer);
-		
-		tmp_neigh=tmp_neigh->next;
-
-	}
-	strcat(
-			buffer,
-			"---------------------------------------------------------------------------------------------------------------------------\n\n");
-
-	len = strlen(buffer);
-	*buffer_location = buffer + offset;
-	len -= offset;
-	if (len > buffer_length)
-		len = buffer_length;
-	else if (len < 0)
-		len = 0;
-	neigh_read_unlock();
-	return len;
-}
-
+/*
 int read_rel_list_proc(char *buffer, char **buffer_location, off_t offset,
 		int buffer_length, int *eof, void *data) {
 	static char *my_buffer;
@@ -519,7 +433,7 @@ int read_rel_list_proc(char *buffer, char **buffer_location, off_t offset,
 	neigh_read_unlock();
 	return len;
 }
-
+*/
 
 int read_node_load_proc(char *buffer, char **buffer_location, off_t offset,
 		int buffer_length, int *eof, void *data) {

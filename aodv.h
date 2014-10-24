@@ -123,7 +123,7 @@
 #define ST_INTERVAL           10000
 #define ACTIVE_GWROUTE_TIMEOUT 	(ST_INTERVAL * 2) + 1000
 #define TIMEOUT_DELAY_ROUTE_UPDATE 1000 // 1 second //MCC - Unused
-
+/*
 //ETT Definitions
 #define ETT_INTERVAL	60000 //1 minute by default
 #define ETT_FAST_INTERVAL 20000 //20 sec for first estimation
@@ -132,8 +132,9 @@
 #define ETT_RANGE	50 //Usecs Range [-50, +50] for a valid estimation
 #define ALLOWED_ETT_LOSS 2 //Consecutive Losses allowed
 #define PROBE_PACKET 11776 //(Microsecs per Symbol)
-#define DEFAULT_ETT_METRIC 1000000 //1 second
 #define PROBE_PACKET_SIZE 61740 //(Microsecs per Symbol)
+*/
+#define DEFAULT_ETT_METRIC 1000000 //1 second
 #define RATE_1 10 //1Mbps
 #define RATE_2 20
 #define RATE_5 55
@@ -208,7 +209,7 @@
 #define TASK_GW_CLEANUP     107
 #define ST_RREQ_MESSAGE 128
 #define TASK_RECV_STRREQ 128
-
+/*
 //FB-AODV
 #define TASK_SEND_ETT	109  //Sending a pair of probe packets
 #define ETT_S_MESSAGE	110
@@ -216,10 +217,12 @@
 #define ETT_L_MESSAGE 	111
 #define TASK_RECV_L_ETT	111  //Received a large probe packet
 #define TASK_ETT_CLEANUP 112 //Cleanup ETT-METRIC
-
+*/
 #define TASK_NEIGHBOR_2H 113
+/*
 #define ETT_INFO_MSG 124
 #define TASK_ETT_INFO 124
+*/
 #define TASK_SEND_RREP 125
 
 #define TASK_UPDATE_LOAD 131
@@ -480,6 +483,7 @@ typedef struct _brk_link brk_link;
 //
 #endif
 
+/*
 //MCC - ETT Metric Implementation Messages
 //Stuffing of 24 bytes - Necessary to form the probe packets
 typedef struct {
@@ -538,7 +542,7 @@ typedef struct {
 	u_int32_t last_meas_delay;
 } ett_info;
 //
-
+*/
 
 //////
 //Structure Definitions
@@ -621,7 +625,7 @@ struct _aodv_dev {
 typedef struct _aodv_dev aodv_dev;
 //
 
-
+/*
 typedef struct _etx_params {
 	u_int8_t count;
 	u_int8_t send_etx;
@@ -640,7 +644,7 @@ typedef struct _ett_params {
 	u_int16_t interval;
 	u_int16_t fixed_rate;
 } ett_params;
-
+*/
 //Node Load Tables
 typedef struct _node_load {
 	u_int32_t ip;
@@ -667,8 +671,8 @@ struct _aodv_neigh {
 	struct net_device *dev;
 
 	//MCC - Implementation
-	etx_params etx;
-	ett_params ett;
+//	etx_params etx;
+//	ett_params ett;
 	load_params load_metric;
     u_int16_t recv_rate;
     u_int16_t send_rate;
@@ -736,7 +740,7 @@ struct services {
 #include "packet_in.h"
 #include "packet_out.h"
 #include "packet_queue.h"
-#include "probe_ett.h"
+//#include "probe_ett.h"
 #include "rerr.h"
 #include "route_alg.h"
 #include "rpdb.h"

@@ -117,6 +117,7 @@ int recv_rreq_st(task * tmp_packet) {
 
 	if (g_routing_metric == HOPS)
 		tmp_rreq->path_metric = tmp_rreq->num_hops;
+/*
 	else {
 		if (tmp_neigh->recv_rate == 0 || tmp_neigh->send_rate == 0 || tmp_neigh->etx_metric == 0){
 #ifdef DEBUG
@@ -126,6 +127,7 @@ int recv_rreq_st(task * tmp_packet) {
 		}		
 			tmp_rreq->path_metric +=(PROBE_PACKET*1000)/(tmp_neigh->recv_rate*tmp_neigh->etx_metric); //ETT in microseconds	
 	}
+*/
 
 	if (update_gw(tmp_rreq->gw_ip, tmp_rreq->dst_id, tmp_rreq->num_hops,
 			tmp_rreq->path_metric)) {

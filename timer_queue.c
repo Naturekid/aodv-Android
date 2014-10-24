@@ -388,11 +388,11 @@ int read_timer_queue_proc(char *buffer, char **buffer_location, off_t offset,
 		case TASK_NEIGHBOR:
 			strcat(buffer, "Neighbour Validity   ");
 			break;
-
+/*
 		case TASK_SEND_ETT:
 			strcat(buffer, "Next ETT-Pair        ");
 			break;
-
+*/
 		case TASK_GW_CLEANUP:
 			strcat(buffer, "Gateway Validity     ");
 			break;
@@ -400,11 +400,11 @@ int read_timer_queue_proc(char *buffer, char **buffer_location, off_t offset,
 		case TASK_ST:
 			strcat(buffer, "Next ST-RREQ         ");
 			break;
-
+/*
 		case TASK_ETT_CLEANUP:
 			strcat(buffer, "ETT Validity         ");
 			break;
-
+*/
 		case TASK_NEIGHBOR_2H:
 			strcat(buffer, "Neighbour 2H Validity");
 			break;

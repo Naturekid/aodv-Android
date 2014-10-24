@@ -90,7 +90,7 @@ int is_control_task(int type){
 	switch(type)
 
 	{
-
+/*
 		case TASK_ETT_INFO:
 
 		case TASK_SEND_ETT:
@@ -98,7 +98,7 @@ int is_control_task(int type){
 		case TASK_RECV_S_ETT:
 
 		case TASK_RECV_L_ETT: return 0;
-
+*/
 
 
 		case TASK_HELLO:
@@ -131,7 +131,7 @@ int is_control_task(int type){
 
 
 
-		case TASK_ETT_CLEANUP:
+//		case TASK_ETT_CLEANUP:
 
 		case TASK_NEIGHBOR_2H:
 

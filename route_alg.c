@@ -7,7 +7,7 @@
 extern aodv_dev* g_mesh_dev;
 extern aodv_neigh *aodv_neigh_list;
 extern aodv_neigh_2h *aodv_neigh_list_2h;
-
+/*
 int ett_metric(aodv_neigh *tmp_neigh, rreq *tmp_rreq) {
 	
 	if (tmp_neigh->recv_rate == 0 || tmp_neigh->send_rate == 0  || tmp_neigh->etx_metric == 0)
@@ -16,7 +16,7 @@ int ett_metric(aodv_neigh *tmp_neigh, rreq *tmp_rreq) {
 	tmp_rreq->path_metric +=(PROBE_PACKET*1000)/(tmp_neigh->recv_rate*tmp_neigh->etx_metric); //ETT in microseconds
 	return 0;
 }
-
+*/
 u_int8_t compute_coef(u_int16_t size, u_int16_t rate) {
 
 	u_int32_t other_delays = 122*100; //122 usecs (DIFS, SIFS, ACK)
@@ -34,7 +34,7 @@ u_int8_t compute_coef(u_int16_t size, u_int16_t rate) {
 	coef = (nominal_delay*100)/coef;
 	return (u_int8_t)coef;
 }
-
+/*
 int wcim_metric(aodv_neigh *tmp_neigh, rreq *tmp_rreq) {
 
 	int i, alpha;
@@ -103,4 +103,4 @@ int wcim_metric(aodv_neigh *tmp_neigh, rreq *tmp_rreq) {
 	return 0;
 
 }
-
+*/

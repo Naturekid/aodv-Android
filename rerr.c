@@ -221,10 +221,11 @@ printk("new brk link %s:%s:%s:%s\n",s,d,l,la);
 		tmp_route = tmp_route->next;
 
 	}
+/*
 	if (g_routing_metric == WCIM && expired_routes != 0)
 
 	update_my_load();
-
+*/
 
 	return 0;
 }
@@ -396,9 +397,10 @@ int recv_rerr(task * tmp_packet) {
 		}
 
 	}
+/*
 	if (g_routing_metric == WCIM && expired_routes != 0)
 	update_my_load();
-
+*/
 
 	return 0;
 

@@ -128,8 +128,10 @@ int send_hello(helloext_struct *total_ext, int num_neigh) {
 	count++;
 	if (count == 10) {
 		count = 0;
+/*
 		if (g_routing_metric != HOPS)
 			compute_etx();
+*/
 	}
 
 	return 1;
@@ -141,7 +143,7 @@ int gen_hello() {
 	helloext_struct *simple_ext = NULL;
 	int neigh_count = 0;
 	aodv_neigh *tmp_entry;
-
+/*
 	if (g_routing_metric != HOPS) {
 		tmp_entry = aodv_neigh_list;
 		while (tmp_entry != NULL) {
@@ -160,6 +162,7 @@ int gen_hello() {
 			tmp_entry = tmp_entry->next;
 		}
 	}
+*/
 
 	send_hello(total_ext, neigh_count);
 
@@ -218,27 +221,27 @@ int recv_hello(task * tmp_packet) {
 
 #ifdef RECOVERYPATH
 		/*********************************************
-            Ìí¼ÓÁËÍ¨Â·´¦Àí²¿·Ö£¬ÔÙ¼ì²âµ½ÐÂÁÚ¾ÓÊ±£¬
-            É¨Ãè¶ÏÂ·±í£¬²¢¶ÔÏàÓ¦ÌõÄ¿·¢ÆðÂ·ÓÉ·¢ÏÖ
+            ï¿½ï¿½ï¿½ï¿½ï¿½Í¨Â·ï¿½ï¿½ï¿½?ï¿½Ö£ï¿½ï¿½Ù¼ï¿½âµ½ï¿½ï¿½ï¿½Ú¾ï¿½Ê±ï¿½ï¿½
+            É¨ï¿½ï¿½ï¿½Â·ï¿½?ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½Â·ï¿½É·ï¿½ï¿½ï¿½
 		**********************************************/
 		//printk("Start to manage brk_list in hello.c!\n");
 		brk_link *tmp_link;
 		tmp_link = brk_list;
 		int is_rcvp = 0;
 		unsigned char tos;
-		//Ä¬ÈÏËÙÂÊÎª1MbpsÀàÐÍ£¬¿ÉÄÜÐèÒª½øÐÐµ÷Õû
+		//Ä¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª1Mbpsï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½
 
 		tos = 0x02;
 
-		if(tmp_link==NULL){//¿Õ£¬ÎÞÐè²Ù×÷£¬·µ»Ø
+		if(tmp_link==NULL){//ï¿½Õ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 #ifdef CaiDebug
 		    printk("The brk list is empty!\n");
 #endif
 		}
 		else{
-		    while(tmp_link!=NULL){//±éÀú¶ÏÂ·±í£¬·¢ÆðÂ·ÓÉ·¢ÏÖ
+		    while(tmp_link!=NULL){//ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½?ï¿½ï¿½ï¿½ï¿½Â·ï¿½É·ï¿½ï¿½ï¿½
 			is_rcvp = 0;
-		        if(tmp_link->state!=INVALID && !is_overlapped_with_route(tmp_link) ){//¸Ã¶ÏÂ·Î´Ê§Ð§
+		        if(tmp_link->state!=INVALID && !is_overlapped_with_route(tmp_link) ){//ï¿½Ã¶ï¿½Â·Î´Ê§Ð§
 		            if(tmp_link->dst_ip == tmp_packet->src_ip){//the new neighor is the right dst
 				//because gen_rcvp will remove the current tmp_link, so get next
 				//link sould be manage in this segment,the same in else
@@ -328,9 +331,8 @@ int recv_hello(task * tmp_packet) {
 			+ getcurrtime();
 	if (g_routing_metric == HOPS) //it doesn't need metric computation
 		return 0;
-
-			hello_orig->etx.count++;
-
+//// these are not need by hops of metric
+/*			hello_orig->etx.count++;
 	if (g_routing_metric == WCIM)
 		update_neigh_load(hello_orig, NULL, tmp_hello->load,
 				tmp_hello->load_seq);
@@ -380,10 +382,10 @@ int recv_hello(task * tmp_packet) {
 		tmp_hello_extension = (hello_extension *) ((void*)tmp_hello_extension
 				+ sizeof(hello_extension));
 	}
-
+*/
 	return 0;
 }
-
+/*
 void compute_etx() {
 	aodv_neigh *tmp_neigh = aodv_neigh_list;
 	while (tmp_neigh != NULL) {
@@ -407,4 +409,4 @@ void compute_etx() {
 
 	}
 }
-
+*/

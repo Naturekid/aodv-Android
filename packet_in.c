@@ -34,11 +34,11 @@ int valid_aodv_packet(int numbytes, int type, char *data, struct timeval tv) {
 	rcvp *tmp_rcvp;
 	rrdp *tmp_rrdp;
 #endif
-
+/*
 	s_probe *tmp_sprobe;
 	l_probe *tmp_lprobe;
 	ett_info *tmp_ett_info;
-
+*/
 	switch (type) {
 
 	case ST_RREQ_MESSAGE:
@@ -71,7 +71,7 @@ int valid_aodv_packet(int numbytes, int type, char *data, struct timeval tv) {
 		}
 		break;
 
-    /****************Ìí¼ÓÀàÐÍRCVP_MESSAGE*******************/
+    /****************ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½RCVP_MESSAGE*******************/
 	#ifdef RECOVERYPATH
     	case RCVP_MESSAGE:
         	tmp_rcvp = (rcvp *) data;
@@ -84,7 +84,7 @@ int valid_aodv_packet(int numbytes, int type, char *data, struct timeval tv) {
        			return 1;
         	break;
 	#endif
-
+/*
 	case ETT_S_MESSAGE: //ETT small message received
 		tmp_sprobe = (s_probe *) data;
 		if (numbytes == sizeof(s_probe)) {
@@ -102,20 +102,20 @@ int valid_aodv_packet(int numbytes, int type, char *data, struct timeval tv) {
 			return 1;
 		}
 		break;
-
+*/
 	case RREQ_MESSAGE:
 		tmp_rreq = (rreq *) data;
 		if (numbytes == sizeof(rreq))
 			return 1;
 		break;
 
-
+/*
 	case ETT_INFO_MSG:
 		tmp_ett_info = (ett_info *) data;
 		if (numbytes == sizeof(ett_info))
 			return 1;
 		break;
-
+*/
 	default:
 		break;
 
