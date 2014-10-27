@@ -30,6 +30,14 @@ int recv_rreq(task * tmp_packet) {
 	tmp_rreq = tmp_packet->data;
 	convert_rreq_to_host(tmp_rreq);
 
+#ifdef DEBUGC
+	//test:if we can get dev via task
+	struct net_device *task_dev;
+	task_dev = tmp_packet->dev;
+	if(task_dev)
+	printk("get dev %s from task in recv rreq\n",task_dev->name);
+#endif
+
 	if (tmp_rreq->dst_ip == g_mesh_ip || tmp_rreq->gateway == g_mesh_ip)
 		iam_destination = 1;
 

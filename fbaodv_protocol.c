@@ -59,7 +59,7 @@ unsigned int aodv_gateway;
 char g_aodv_dev[8];
 u_int32_t g_null_ip;
 int node_type;//wireless=0,wired=1,IMN=2
-int dev_num;
+int g_dev_num;
 
 #ifdef BLACKLIST
 	char * aodv_blacklist[10];
@@ -79,7 +79,7 @@ int dtn_register = 0;
 
 static struct proc_dir_entry *aodv_dir, *route_table_proc, *neigh_proc,
 		*gw_proc, *timers_proc, *node_load_proc, *sources_proc,
-		*reliability_proc, *ett_proc,
+		/**reliability_proc, *ett_proc,*/
 		*tos_proc;
 
 module_param(mesh_dev, charp, 0);
@@ -200,7 +200,8 @@ static int __init init_fbaodv_module(void) {
 	printk("\n*Initialicing mesh device  - %s\n", mesh_dev);	
 	extern aodv_dev* net_dev_list;
 	net_dev_list = NULL;
-	dev_num = 0;
+	g_dev_num = 0;
+
 	//if (init_aodv_dev(mesh_dev))
 //	if(init_net_dev(mesh_dev))
 //		goto out1;
@@ -223,7 +224,7 @@ static int __init init_fbaodv_module(void) {
 			strcpy(dev_name,pdev->name);
 			if(init_net_dev(dev_name))
 				continue;
-			dev_num ++;
+			g_dev_num ++;
 			printk("------------------------------------\ndev->name:%s\ndev->ifindex:%d\ndev->type:%d\ndev->dev_id:%d\n----------------------------------\n",pdev->name,pdev->ifindex,pdev->type,pdev->dev_id);
 			
 			
@@ -249,7 +250,18 @@ static int __init init_fbaodv_module(void) {
 		}
 		*/
 	}
+	if(g_dev_num==0)
+	{
+		printk("No avalible NET_DEVICES!\n");
+		goto out1;
+	}
 
+	printk("*************************************\n");
+	printk("subnet:%s\n",aodv_subnet);
+	printk("network_ip:%s\n",network_ip);
+	printk("gateway:%s\n",inet_ntoa(g_aodv_gateway));
+	printk("Number of devs:%d\n",g_dev_num);
+	printk("*************************************\n");
 
 //#endif
 	startup_aodv();
@@ -268,6 +280,7 @@ static int __init init_fbaodv_module(void) {
 
 	aodv_dir = proc_mkdir("fbaodv",NULL);
 	if (aodv_dir == NULL) {
+		printk("aodv_dir is NULL\n");
 		goto out2;
 	}
 ///*
@@ -293,20 +306,21 @@ static int __init init_fbaodv_module(void) {
 #ifdef KERNEL2_6_26
 	timers_proc->owner=THIS_MODULE;
 #endif
-
+/*
 	reliability_proc=create_proc_read_entry("reliability", 0, aodv_dir, read_rel_list_proc, NULL);
 	if (reliability_proc == NULL) goto out2;
+
 #ifdef KERNEL2_6_26
 	reliability_proc->owner=THIS_MODULE;
 #endif
-/*
+
 	ett_proc=create_proc_read_entry("bw_estimation", 0, aodv_dir, read_ett_list_proc, NULL);
 	if (ett_proc == NULL) goto out2;
-*/
+
 #ifdef KERNEL2_6_26
 	ett_proc->owner=THIS_MODULE;
 #endif
-
+*/
 	sources_proc=create_proc_read_entry("sources", 0, aodv_dir, read_src_list_proc, NULL);
 	if (sources_proc == NULL) goto out2;
 #ifdef KERNEL2_6_26
@@ -326,9 +340,9 @@ static int __init init_fbaodv_module(void) {
 #endif
 
 	tos_proc=create_proc_read_entry("tos_available", 0, aodv_dir, read_flow_type_table_proc, NULL);
-	if (ett_proc == NULL) goto out2;
+//	if (ett_proc == NULL) goto out2;
 #ifdef KERNEL2_6_26
-	ett_proc->owner=THIS_MODULE;
+//	ett_proc->owner=THIS_MODULE;
 #endif
 //*/
 	//netfilter stuff
@@ -376,7 +390,7 @@ static int __init init_fbaodv_module(void) {
 	remove_proc_entry("fbaodv/routes",NULL);
 	remove_proc_entry("fbaodv/timers",NULL);
 	remove_proc_entry("fbaodv/neigh",NULL);
-	remove_proc_entry("fbaodv/reliability", NULL);
+	//remove_proc_entry("fbaodv/reliability", NULL);
 	remove_proc_entry("fbaodv/sources", NULL);
 	remove_proc_entry("fbaodv/node_load", NULL);
 
@@ -384,7 +398,7 @@ static int __init init_fbaodv_module(void) {
 
 	remove_proc_entry("fbaodv/user_gateway", NULL);
 	remove_proc_entry("fbaodv/gateways_assigned", NULL);
-	remove_proc_entry("fbaodv/bw_estimation", NULL);
+	//remove_proc_entry("fbaodv/bw_estimation", NULL);
 	remove_proc_entry("fbaodv/tos_available", NULL);
 	remove_proc_entry("fbaodv", NULL);
 
@@ -435,15 +449,15 @@ static void __exit cleanup_fbaodv_module(void)
 	remove_proc_entry("fbaodv/routes",NULL);
 	remove_proc_entry("fbaodv/timers",NULL);
 	remove_proc_entry("fbaodv/neigh",NULL);
-	remove_proc_entry("fbaodv/reliability", NULL);
+	//remove_proc_entry("fbaodv/reliability", NULL);
 	remove_proc_entry("fbaodv/sources", NULL);
 	remove_proc_entry("fbaodv/node_load", NULL);
 
 	remove_proc_entry("fbaodv/gateways", NULL);
 
 	remove_proc_entry("fbaodv/user_gateway", NULL);
-	//remove_proc_entry("fbaodv/gateways_assigned", NULL);
-	remove_proc_entry("fbaodv/bw_estimation", NULL);
+	remove_proc_entry("fbaodv/gateways_assigned", NULL);
+	//remove_proc_entry("fbaodv/bw_estimation", NULL);
 	remove_proc_entry("fbaodv/tos_available", NULL);
 
 	remove_proc_entry("fbaodv", NULL);

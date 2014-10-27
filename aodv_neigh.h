@@ -18,8 +18,8 @@ void init_aodv_neigh_list(void);
 void delete_aodv_neigh_list(void);
 aodv_neigh *find_aodv_neigh(u_int32_t target_ip);
 int read_neigh_proc(char *buffer, char **buffer_location, off_t offset, int buffer_length,int *eof,void *data);
-int read_rel_list_proc(char *buffer, char **buffer_location, off_t offset,
-		int buffer_length, int *eof, void *data);
+//int read_rel_list_proc(char *buffer, char **buffer_location, off_t offset,
+//		int buffer_length, int *eof, void *data);
 int read_node_load_proc(char *buffer, char **buffer_location, off_t offset,
 		int buffer_length, int *eof, void *data);
 aodv_neigh *first_aodv_neigh(void);

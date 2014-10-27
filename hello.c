@@ -176,6 +176,15 @@ int recv_hello(task * tmp_packet) {
 	int i;
 	u_int8_t load = 0;
 	u_int16_t load_seq = 0;
+/*
+#ifdef DEBUGC
+	//test:if we can get dev via task
+	struct net_device *task_dev;
+	task_dev = tmp_packet->dev;
+	if(task_dev)
+	printk("get dev %s from task\n",task_dev->name);
+#endif
+*/
 
 	tmp_hello= (hello *)tmp_packet->data;
 	tmp_hello_extension = (hello_extension *) ((void*)tmp_packet->data
