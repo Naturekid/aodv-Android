@@ -16,9 +16,10 @@
 #include "aodv.h"
 
 int init_sock(struct socket *sock, u_int32_t ip, char *dev_name);
-void close_sock(void);
-int local_broadcast(u_int8_t ttl, void *data, const size_t datalen);
-int send_message(u_int32_t dst_ip, u_int8_t ttl, void *data, const size_t datalen);
+void close_sock(aodv_dev *dev);
+void close_all_sock();
+int local_broadcast(u_int8_t ttl, void *data, const size_t datalen,aodv_dev *from_dev);
+int send_message(u_int32_t dst_ip, u_int8_t ttl, void *data, const size_t datalen,aodv_dev *out_dev);
 //int send_ett_probe(u_int32_t dst_ip, void *data1, const size_t datalen1, void *data2, const size_t datalen2);
 #ifdef DTN
 int send2dtn(void * data,unsigned short port);
