@@ -13,12 +13,12 @@ extern u_int8_t g_routing_metric;
 extern u_int32_t g_mesh_ip;
 
 void convert_rreq_to_host_st(rreq_st * tmp_rreq) {
-	tmp_rreq->dst_id = ntohl(tmp_rreq->dst_id);
+	tmp_rreq->dst_seq = ntohl(tmp_rreq->dst_seq);
 	tmp_rreq->path_metric = ntohl(tmp_rreq->path_metric);
 }
 
 void convert_rreq_to_network_st(rreq_st * tmp_rreq) {
-	tmp_rreq->dst_id = htonl(tmp_rreq->dst_id);
+	tmp_rreq->dst_seq = htonl(tmp_rreq->dst_seq);
 	tmp_rreq->path_metric = htonl(tmp_rreq->path_metric);
 }
 
@@ -56,8 +56,8 @@ int gen_st_rreq(void) {
 		return -EHOSTUNREACH;
 	}
 
-	tmp_route->dst_id = tmp_route->dst_id +1;
-	out_rreq->dst_id = tmp_route->dst_id;
+	tmp_route->dst_seq = tmp_route->dst_seq +1;
+	out_rreq->dst_seq = tmp_route->dst_seq;
 	out_rreq->u = TRUE;
 	out_ttl = NET_DIAMETER;
 
@@ -75,7 +75,7 @@ int gen_st_rreq(void) {
 
 	convert_rreq_to_network_st(out_rreq);
 
-	local_broadcast(out_ttl, out_rreq, sizeof(rreq_st));
+	local_broadcast(out_ttl, out_rreq, sizeof(rreq_st),NULL);
 
 	kfree(out_rreq);
 	insert_timer_simple(TASK_ST, ST_INTERVAL, g_mesh_ip);
@@ -129,11 +129,11 @@ int recv_rreq_st(task * tmp_packet) {
 	}
 */
 
-	if (update_gw(tmp_rreq->gw_ip, tmp_rreq->dst_id, tmp_rreq->num_hops,
+	if (update_gw(tmp_rreq->gw_ip, tmp_rreq->dst_seq, tmp_rreq->num_hops,
 			tmp_rreq->path_metric)) {
 
 		convert_rreq_to_network_st(tmp_rreq);
-		local_broadcast(tmp_packet->ttl - 1, tmp_rreq, sizeof(rreq_st));
+		local_broadcast(tmp_packet->ttl - 1, tmp_rreq, sizeof(rreq_st),tmp_packet->dev);
 		return 0;
 	}
 

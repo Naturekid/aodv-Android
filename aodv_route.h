@@ -17,7 +17,7 @@
 int read_route_table_proc(char *buffer, char **buffer_location, off_t offset,
 		int buffer_length, int *eof, void *data);
 
-u_int8_t compute_load(u_int16_t rate_link, unsigned char tos);
+//u_int8_t compute_load(u_int16_t rate_link, unsigned char tos);
 void update_my_load(void);
 
 void init_aodv_route_table(void);
@@ -31,7 +31,7 @@ aodv_route *find_aodv_route(u_int32_t src_ip, u_int32_t dst_ip,
 aodv_route *find_aodv_route_by_id(u_int32_t dst_ip, u_int32_t dst_id);
 
 aodv_route *create_aodv_route(u_int32_t src_ip, u_int32_t dst_ip,
-		unsigned char tos, u_int32_t dst_id);
+		unsigned char tos, u_int32_t dst_id,struct net_device *dev);
 aodv_route *first_aodv_route(void);
 
 void remove_aodv_route(aodv_route * dead_route);

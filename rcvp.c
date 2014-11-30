@@ -52,7 +52,7 @@ int gen_rcvp(u_int32_t dst_ip){
 					}
 
                 tmp_rcvp->dst_ip = dst_ip;
-                tmp_rcvp->dst_id = htonl(dst_ip);
+                tmp_rcvp->dst_seq = htonl(dst_ip);
                 tmp_rcvp->src_ip = tmp_link->src_ip;
                 tmp_rcvp->last_avail_ip = tmp_link->last_avail_ip;
                 tmp_rcvp->type = RCVP_MESSAGE;
@@ -80,7 +80,7 @@ int gen_rcvp(u_int32_t dst_ip){
 #endif
 
                 //将通路包沿断路表里的上一跳发回给源节点
-                send_message(tmp_link->last_hop, NET_DIAMETER, tmp_rcvp,sizeof(rcvp));
+                send_message(tmp_link->last_hop, NET_DIAMETER, tmp_rcvp,sizeof(rcvp),NULL);
                 kfree(tmp_rcvp);
             }
         else{//若为源节点
@@ -187,14 +187,15 @@ int recv_rcvp(task *tmp_packet){
             }
 
             new_rcvp->dst_ip = tmp_rcvp->dst_ip;
-            new_rcvp->dst_id = htonl(tmp_rcvp->dst_ip);
+            new_rcvp->dst_seq = htonl(tmp_rcvp->dst_ip);
             new_rcvp->num_hops = num_hops;
             new_rcvp->src_ip = tmp_rcvp->src_ip;
             new_rcvp->last_avail_ip = tmp_link->last_avail_ip;
             new_rcvp->type = RCVP_MESSAGE;
 
-
-        send_message(tmp_link->last_hop, NET_DIAMETER, new_rcvp,sizeof(rcvp));
+	//1108
+	aodv_dev *tmp_dev=get_netdev_by_name(tmp_packet->dev->name);
+        send_message(tmp_link->last_hop, NET_DIAMETER, new_rcvp,sizeof(rcvp),tmp_dev);
 	kfree(new_rcvp);
 	
         remove_brk_link(tmp_link);
@@ -235,7 +236,7 @@ int gen_rrdp(u_int32_t src_ip,u_int32_t dst_ip,u_int32_t last_hop,unsigned char 
 	tmp_rrdp->src_ip = src_ip;
 	tmp_rrdp->tos = tos;
 
-	send_message(last_hop, NET_DIAMETER, tmp_rrdp,sizeof(rrdp));
+	send_message(last_hop, NET_DIAMETER, tmp_rrdp,sizeof(rrdp),NULL);
 	kfree(tmp_rrdp);
 					
 	return 1;
@@ -270,10 +271,12 @@ int recv_rrdp(task *tmp_packet){
 				//tmp_rrdp->n = 0;
 				tmp_rrdp->num_hops = num_hops;
 				//tmp_rerr->dst_ip = tmp_route->dst_ip;
-				//tmp_rerr->dst_id = htonl(tmp_route->dst_id);
+				//tmp_rerr->dst_seq = htonl(tmp_route->dst_seq);
+				//1108				
+				aodv_dev *tmp_dev = get_netdev_by_name(tmp_packet->dev->name);
 
 				send_message(tmp_route->last_hop, NET_DIAMETER, tmp_rrdp,
-						sizeof(rrdp));
+						sizeof(rrdp),tmp_dev);
 
 #ifdef CaiDebug
 	char last[20];

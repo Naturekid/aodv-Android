@@ -88,6 +88,11 @@ void aodv(void) {
 			//takes a different action depending on what type of event is recieved
 			switch (tmp_task->type) {
 
+			//route neighbor
+			case TASK_ROUTE_NEIGH:
+				route_neigh(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos);
+				kfree(tmp_task->data);
+				break;
 			//remove following case when DTN hell test end
 			case TASK_DTN_HELLO:
 				inet_aton("127.127.127.127",&dst);

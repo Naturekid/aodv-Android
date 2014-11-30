@@ -213,7 +213,7 @@ brk_link *create_brk_link(u_int32_t src_ip, u_int32_t dst_ip,
 	}
 
 	tmp_entry->dst_ip = dst_ip;
-	tmp_entry->dst_id = htonl(dst_ip);
+	tmp_entry->dst_seq = htonl(dst_ip);
 	tmp_entry->src_ip = src_ip;
 	tmp_entry->last_hop = lasthop;
 	tmp_entry->state = ACTIVE;

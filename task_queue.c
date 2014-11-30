@@ -136,10 +136,12 @@ int is_control_task(int type){
 		case TASK_NEIGHBOR_2H:
 
 		case TASK_UPDATE_LOAD:
-		case TASK_RECV_RCVP:
 #ifdef RECOVERYPATH
+		case TASK_RECV_RCVP:
+
 		case TASK_RECV_RRDP:
 #endif
+		case TASK_ROUTE_NEIGH:
 #ifdef DTN_HELLO
 		case TASK_DTN_HELLO:
 #endif

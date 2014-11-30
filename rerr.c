@@ -58,7 +58,7 @@ int gen_rerr(u_int32_t brk_dst_ip) {
 					tmp_rerr->n = 0;
 					tmp_rerr->num_hops = 0;
 					tmp_rerr->dst_ip = tmp_route->dst_ip;
-					tmp_rerr->dst_id = htonl(tmp_route->dst_id);
+					tmp_rerr->dst_seq = htonl(tmp_route->dst_seq);
 
 #ifdef DTN
 					//if there is DTN register,current node will be the
@@ -101,7 +101,7 @@ strcpy(last,inet_ntoa(tmp_route->last_hop));
 	printk("rerr src is %s,brk_dst_ip is %s,the last hop is %s\n",local,brk,last);
 	
 #endif
-                    		send_message(tmp_route->last_hop, NET_DIAMETER, tmp_rerr,sizeof(rerr));
+                    send_message(tmp_route->last_hop, NET_DIAMETER, tmp_rerr,sizeof(rerr),tmp_route->dev);
                      kfree(tmp_rerr);
 
 #ifdef RECOVERYPATH
@@ -272,7 +272,7 @@ int recv_rerr(task * tmp_packet) {
 #endif
 
     tmp_route
-			= find_aodv_route_by_id(tmp_rerr->dst_ip, ntohl(tmp_rerr->dst_id));
+			= find_aodv_route_by_id(tmp_rerr->dst_ip, ntohl(tmp_rerr->dst_seq));
 
 	if (tmp_route && tmp_route->next_hop == tmp_packet->src_ip) {
 		//if there is any hop before me
@@ -287,7 +287,7 @@ int recv_rerr(task * tmp_packet) {
 				tmp_rerr->n = 0;
 				tmp_rerr->num_hops = num_hops;
 				tmp_rerr->dst_ip = tmp_route->dst_ip;
-				tmp_rerr->dst_id = htonl(tmp_route->dst_id);
+				tmp_rerr->dst_seq = htonl(tmp_route->dst_seq);
 
 #ifdef DTN
 				tmp_rerr->src_ip = tmp_route->src_ip;
@@ -300,7 +300,7 @@ int recv_rerr(task * tmp_packet) {
 
 
 				send_message(tmp_route->last_hop, NET_DIAMETER, tmp_rerr,
-						sizeof(rerr));
+						sizeof(rerr),tmp_route->dev);
 
 #ifdef RECOVERYPATH
                     /****************************************************

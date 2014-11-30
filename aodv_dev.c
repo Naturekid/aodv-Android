@@ -14,9 +14,10 @@
 extern char g_aodv_dev[8];
 extern u_int32_t g_mesh_ip;
 extern u_int32_t g_mesh_netmask;
-#ifdef DEBUGC
+//#ifdef DEBUGC
 extern u_int32_t g_node_name;
-#endif
+//#endif
+
 
 aodv_dev *g_mesh_dev;
 aodv_route *g_local_route;
@@ -45,7 +46,7 @@ aodv_dev *create_aodv_dev(struct net_device *dev) {
 	
 	if (strcmp(dev->name, g_aodv_dev) == 0){
 		
-		g_local_route = create_aodv_route(g_mesh_ip, g_mesh_ip, NO_TOS, 1);
+		g_local_route = create_aodv_route(g_mesh_ip, g_mesh_ip, NO_TOS, 1,dev);
 		g_local_route->dst_ip =g_mesh_ip;
 		//tmp_route->netmask = calculate_netmask(0); //ifa->ifa_mask;
 		g_local_route->self_route = TRUE;
@@ -186,7 +187,7 @@ printk("-----------new dev ip %s--------\n",inet_ntoa(new_dev->ip));
 	}
 	//when the dev is the first dev,create g_local_route & the net_dev_list
 	if(net_dev_list == NULL){
-		g_local_route = create_aodv_route(new_dev->ip, new_dev->ip, NO_TOS, 1);
+		g_local_route = create_aodv_route(new_dev->ip, new_dev->ip, NO_TOS, 1,dev);
 		g_local_route->dst_ip = new_dev->ip;
 		//tmp_route->netmask = calculate_netmask(0); //ifa->ifa_mask;
 		g_local_route->self_route = TRUE;
@@ -198,6 +199,18 @@ printk("-----------new dev ip %s--------\n",inet_ntoa(new_dev->ip));
 		g_local_route->tos = 0;
 		g_local_route->load = 0;
 		
+	}
+	else{
+		aodv_route *tmp_self = create_aodv_route(new_dev->ip, new_dev->ip, NO_TOS, 1,dev);
+		tmp_self->dst_ip = new_dev->ip;
+		tmp_self->self_route = TRUE;
+		tmp_self->next_hop = tmp_self->dst_ip;
+		tmp_self->last_hop = tmp_self->dst_ip;
+		tmp_self->lifetime = -1;
+		tmp_self->state = ACTIVE;
+		tmp_self->dev = new_dev;
+		tmp_self->tos = 0;
+		tmp_self->load = 0;
 	}
 	tmp_src_entry = insert_src_list_entry(new_dev->ip);
 	if (tmp_src_entry == NULL) {
@@ -250,17 +263,31 @@ printk("----------i n d 1----------------\n");
 	//need to think of                                             
 	if(g_mesh_dev==NULL) {
 		g_mesh_dev = new_dev;
-		g_node_name = new_dev->ip;
-		
 #ifdef DEBUGC
 		printk("=================init g_mesh_dev%s=============\n",inet_ntoa(g_node_name));
 #endif
 	}
 	/////**************************////
-	//insert the new_dev in the front of list 
+	//insert the new_dev into the list
+	//let the wireless at the last 
+	printk("---\ninsert_net_dev in socket:%s-----\n",new_dev->name);
+	if(strcmp(new_dev->name,"adhoc0")==0)
+	{
+		if(net_dev_list==NULL)
+		{
+			new_dev->next=NULL;
+			net_dev_list = new_dev;
+			return 0;
+		}
+		aodv_dev *pd = net_dev_list;
+		while(pd->next)	pd = pd->next;
+		new_dev->next = pd->next;
+		pd->next = new_dev;
+		return 0;
+	}
+	//insert the wired devices in the front of the list
 	new_dev->next = net_dev_list;
 	net_dev_list = new_dev;
-	printk("---\ninsert_net_dev in socket:%s-----\n",new_dev->name);
 	return 0;
 }
 
@@ -291,5 +318,19 @@ printk("init_net_dev not null\n");
 	printk("\n\nDEVICE ERROR! Unable to locate device: %s, Bailing!\n\n", name);
 	return 1;
 
+}
+
+aodv_dev *get_netdev_by_name(char *name)
+{
+	aodv_dev *tmp_dev = net_dev_list;
+	
+	while(tmp_dev)
+	{	
+		if(strcmp(tmp_dev->name,name)==0)
+			return tmp_dev;
+		tmp_dev = tmp_dev->next;
+	}
+
+	return NULL;
 }
 

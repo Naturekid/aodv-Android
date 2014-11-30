@@ -50,7 +50,7 @@ void delete_gw_list(void){
 }
 
 
-int update_gw(u_int32_t gw_ip, u_int32_t dst_id, u_int8_t num_hops,
+int update_gw(u_int32_t gw_ip, u_int32_t dst_seq, u_int8_t num_hops,
 		u_int32_t path_metric) {
 
 	gw_entry *tmp_entry = gw_list;
@@ -58,16 +58,16 @@ int update_gw(u_int32_t gw_ip, u_int32_t dst_id, u_int8_t num_hops,
 
 	while (tmp_entry != NULL) {
 		if (tmp_entry->ip == gw_ip) {
-			if (tmp_entry->dst_id > dst_id) { //old ST-RREQ
+			if (tmp_entry->dst_seq > dst_seq) { //old ST-RREQ
 				return 0;
-			} else if ((tmp_entry->dst_id == dst_id) && (tmp_entry->metric
+			} else if ((tmp_entry->dst_seq == dst_seq) && (tmp_entry->metric
 					< path_metric)) { //ST-RREQ already received through a better path
 				return 0;
 			} else {
 				tmp_entry->metric = path_metric;
 				tmp_entry->num_hops = num_hops;
 				tmp_entry->lifetime = getcurrtime() + ACTIVE_GWROUTE_TIMEOUT;
-				tmp_entry->dst_id = dst_id;
+				tmp_entry->dst_seq = dst_seq;
 				return 1;
 			}
 		}
@@ -88,7 +88,7 @@ int update_gw(u_int32_t gw_ip, u_int32_t dst_id, u_int8_t num_hops,
 	new_entry->metric = path_metric;
 	new_entry->num_hops = num_hops;
 	new_entry->lifetime = getcurrtime() + ACTIVE_GWROUTE_TIMEOUT;
-	new_entry->dst_id = dst_id;
+	new_entry->dst_seq = dst_seq;
 	new_entry->next = NULL;
 
 	if (gw_list == NULL) {

@@ -73,6 +73,7 @@ void update_my_load() {
 
 }
 
+/*
 u_int8_t compute_load(u_int16_t rate_link, unsigned char tos) {
 
 	u_int8_t activity;
@@ -102,7 +103,7 @@ u_int8_t compute_load(u_int16_t rate_link, unsigned char tos) {
 
 	return activity;
 }
-
+*/
 void expire_aodv_route(aodv_route * tmp_route) {
 
 	route_write_lock(); //lifetime and route_valid are modified or read in packet_out.c - avoid conflicts
@@ -287,7 +288,7 @@ void insert_aodv_route(aodv_route * new_route) { //ordenamos por dst_ip
 
 //wujingbang : tmp_entry->next_hop
 aodv_route *create_aodv_route(u_int32_t src_ip, u_int32_t dst_ip,
-		unsigned char tos, u_int32_t dst_id) {
+		unsigned char tos, u_int32_t dst_seq,struct net_device *dev) {
 	aodv_route *tmp_entry;
 #ifdef DEBUG
 	char src[20];
@@ -309,13 +310,18 @@ aodv_route *create_aodv_route(u_int32_t src_ip, u_int32_t dst_ip,
 	tmp_entry->next_hop = NULL;
 	tmp_entry->src_ip = src_ip;
 	tmp_entry->tos = tos;
-	tmp_entry->dst_id = dst_id;
+	tmp_entry->dst_seq = dst_seq;
 	tmp_entry->last_hop = src_ip;
 
 	tmp_entry->self_route = FALSE;
 	tmp_entry->num_hops = 0;
+
+
+
 	tmp_entry->path_metric = 0;
-	tmp_entry->dev = g_mesh_dev;
+	aodv_dev *tmp_dev = get_netdev_by_name(dev->name);
+	//add some fault-tolerant?	
+	tmp_entry->dev = tmp_dev;
 	tmp_entry->state = INVALID;
 	tmp_entry->netmask = g_broadcast_ip;
 	tmp_entry->prev = NULL;
@@ -335,9 +341,9 @@ aodv_route *create_aodv_route(u_int32_t src_ip, u_int32_t dst_ip,
 }
 
 int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
-		aodv_neigh *next_hop, u_int8_t hops, u_int32_t dst_id,
+		aodv_neigh *next_hop, u_int8_t hops, u_int32_t dst_seq,
 		struct net_device *dev, u_int32_t path_metric) {
-#ifdef DEBUG
+//#ifdef DEBUG
 	char src[16];
 	char dst[16];
 	char nex[16];
@@ -345,7 +351,7 @@ int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 	strcpy(dst, inet_ntoa(dst_ip));
 	strcpy(nex, inet_ntoa(next_hop->ip));
 	printk ("rreq_aodv_route: src is %s dst is %s via %s\n", src,	dst, nex);
-#endif
+//#endif
 
 	aodv_route *tmp_route;
 	int error;
@@ -359,8 +365,8 @@ int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 		printk ("Creating route, %s to %s VIA %s\n", src, dst, nex);
 #endif
 		//wujingbang
-//		tmp_route = create_aodv_route(src_ip, dst_ip, tos, dst_id);
-		tmp_route = create_aodv_route(src_ip, dst_ip, tos, dst_id);
+//		tmp_route = create_aodv_route(src_ip, dst_ip, tos, dst_seq);
+		tmp_route = create_aodv_route(src_ip, dst_ip, tos, dst_seq,dev);
 
 		if (tmp_route == NULL) {
 #ifdef DEBUG
@@ -372,8 +378,14 @@ int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 		tmp_src_entry = find_src_list_entry(src_ip);
 
 		if (tmp_src_entry == NULL) {
+#ifdef DEBUG2
+printk("the src entry is NULL after find\n");
+#endif
 			tmp_src_entry = insert_src_list_entry(src_ip);
 			if (tmp_src_entry == NULL) {
+#ifdef DEBUG2
+printk("the src entry is still NULL after insert\n");
+#endif
 				return 0;
 			}
 		}
@@ -382,13 +394,13 @@ int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 	}
 	 
 	 else { //Route exists!
-#ifdef DEBUG
+//#ifdef DEBUG
 		printk ("We already have route, %s to %s \n", inet_ntoa(src_ip), inet_ntoa(dst_ip));
-#endif
-	 	if (tmp_route->dst_id > dst_id) //older route
+//#endif
+	 	if (tmp_route->dst_seq > dst_seq) //older route
 	 		return 0;
 
-	 	if ((dst_id == tmp_route->dst_id) && (path_metric
+	 	if ((dst_seq == tmp_route->dst_seq) && (path_metric
 	 					>= tmp_route->path_metric)) //worse metric
 	 		return 0;
 
@@ -400,9 +412,9 @@ int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 	 	previous_state = tmp_route->state;
 	 		
 	 	if (previous_state != INVALID){
-#ifdef DEBUG
+//#ifdef DEBUG
 		 	printk("Replacing Route\n");
-	#endif
+//	#endif
 
 
 			
@@ -418,9 +430,10 @@ int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 	 }
 
 	/* Update values in the RT entry */
-	tmp_route->dev = g_mesh_dev;
+	aodv_dev *tmp_dev = get_netdev_by_name(dev->name); 
+	tmp_route->dev = tmp_dev;
 	tmp_route->path_metric = path_metric;
-	tmp_route->dst_id = dst_id;	
+	tmp_route->dst_seq = dst_seq;	
 	tmp_route->num_hops = hops;
 	tmp_route->next_hop = next_hop->ip;
 	route_write_lock(); //lifetime and route_valid are modified or read in packet_out.c - avoid conflicts
@@ -437,6 +450,8 @@ int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 			update_my_load();
 	}		
 */
+
+printk("end in rreq route\n");
 	return 1;
 }
 int rrep_aodv_route(aodv_route *rep_route){
@@ -515,7 +530,7 @@ aodv_route *find_aodv_route(u_int32_t src_ip, u_int32_t dst_ip,
 
 }
 
-aodv_route *find_aodv_route_by_id(u_int32_t dst_ip, u_int32_t dst_id) {
+aodv_route *find_aodv_route_by_id(u_int32_t dst_ip, u_int32_t dst_seq) {
 	aodv_route *tmp_route;
 
 	route_read_lock(); //to avoid conflicts in packet_out.c (uncontrolled interruption)
@@ -533,7 +548,7 @@ aodv_route *find_aodv_route_by_id(u_int32_t dst_ip, u_int32_t dst_id) {
 
 	else {
 		while ((tmp_route != NULL) && (tmp_route->dst_ip == dst_ip)) {
-			if (tmp_route->dst_id == dst_id) {
+			if (tmp_route->dst_seq == dst_seq) {
 				route_read_unlock();
 				return tmp_route;
 			}
@@ -607,7 +622,7 @@ int read_route_table_proc(char *buffer, char **buffer_location, off_t offset,
 			"\nRoute Table \n---------------------------------------------------------------------------------------------------------------------------\n");
 	sprintf(
 			temp_buffer,
-			"   SRC  IP    |    DST  IP    |      ToS      |RLoad|   Next Hop   |   Prev Hop    | DST_ID|Hops|   Path Metric  \n");
+			"   SRC  IP    |    DST  IP    |      ToS      |RLoad|   Next Hop   |   Prev Hop    | dst_seq|Hops|   Path Metric  \n");
 	strcat(my_buffer, temp_buffer);
 	sprintf(
 			temp_buffer,
@@ -661,7 +676,7 @@ int read_route_table_proc(char *buffer, char **buffer_location, off_t offset,
 		}
 
 		sprintf(temp_buffer, "%-16s %-16s %-12s %4u %16s %16s %5u  %3d %9u",
-				src, dst, tos, tmp_entry->load, hop, lhop, tmp_entry->dst_id,
+				src, dst, tos, tmp_entry->load, hop, lhop, tmp_entry->dst_seq,
 				tmp_entry->num_hops, tmp_entry->path_metric);
 		strcat(my_buffer, temp_buffer);
 

@@ -12,12 +12,12 @@ extern u_int32_t g_null_ip;
 extern u_int32_t g_default_gw;
 
 void convert_rreq_to_host(rreq * tmp_rreq) {
-	tmp_rreq->dst_id = ntohl(tmp_rreq->dst_id);
+	tmp_rreq->dst_seq = ntohl(tmp_rreq->dst_seq);
 	tmp_rreq->path_metric = ntohl(tmp_rreq->path_metric);
 }
 
 void convert_rreq_to_network(rreq * tmp_rreq) {
-	tmp_rreq->dst_id = htonl(tmp_rreq->dst_id);
+	tmp_rreq->dst_seq = htonl(tmp_rreq->dst_seq);
 	tmp_rreq->path_metric = htonl(tmp_rreq->path_metric);
 }
 
@@ -107,7 +107,7 @@ int recv_rreq(task * tmp_packet) {
 
 	
 	if (rreq_aodv_route(tmp_rreq->dst_ip, tmp_rreq->src_ip, tmp_rreq->tos,
-			tmp_neigh, tmp_rreq->num_hops, tmp_rreq->dst_id, tmp_packet->dev,
+			tmp_neigh, tmp_rreq->num_hops, tmp_rreq->dst_seq, tmp_packet->dev,
 			tmp_rreq->path_metric)) {
 
 		if (iam_destination) {
@@ -147,7 +147,7 @@ int recv_rreq(task * tmp_packet) {
 		//else forwarding RREQ
 		convert_rreq_to_network(tmp_rreq);
 
-		local_broadcast(tmp_packet->ttl - 1, tmp_rreq, sizeof(rreq));
+		local_broadcast(tmp_packet->ttl - 1, tmp_rreq, sizeof(rreq),tmp_packet->dev);
 
 		return 0;
 	}
@@ -181,8 +181,8 @@ int resend_rreq(task * tmp_packet) {
 	out_ttl = NET_DIAMETER;
 
 	/* Get our own sequence number */
-	g_local_route->dst_id = g_local_route->dst_id + 1;
-	out_rreq->dst_id = g_local_route->dst_id;
+	g_local_route->dst_seq = g_local_route->dst_seq + 1;
+	out_rreq->dst_seq = g_local_route->dst_seq;
 	out_rreq->dst_ip = tmp_packet->dst_ip;
 	if (out_rreq->dst_ip == g_null_ip)
 			out_rreq->gateway = g_default_gw;
@@ -216,7 +216,7 @@ int resend_rreq(task * tmp_packet) {
 */
 
 	convert_rreq_to_network(out_rreq);
-	local_broadcast(out_ttl, out_rreq, sizeof(rreq));
+	local_broadcast(out_ttl, out_rreq, sizeof(rreq),tmp_packet->dev);
 
 		insert_timer_directional(TASK_RESEND_RREQ, 0, tmp_packet->retries - 1,
 				out_rreq->src_ip, out_rreq->dst_ip, out_rreq->tos);
@@ -283,8 +283,8 @@ int gen_rreq(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 	out_ttl = NET_DIAMETER;
 
 	/* Get our own sequence number */
-	g_local_route->dst_id = g_local_route->dst_id + 1;
-	out_rreq->dst_id = g_local_route->dst_id;
+	g_local_route->dst_seq = g_local_route->dst_seq + 1;
+	out_rreq->dst_seq = g_local_route->dst_seq;
 	out_rreq->dst_ip = dst_ip;
 	if (out_rreq->dst_ip == g_null_ip)
 		out_rreq->gateway = g_default_gw;
@@ -317,7 +317,7 @@ int gen_rreq(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 #endif
 
 	convert_rreq_to_network(out_rreq);
-	local_broadcast(out_ttl, out_rreq, sizeof(rreq));
+	local_broadcast(out_ttl, out_rreq, sizeof(rreq),NULL);
 	insert_timer_directional(TASK_RESEND_RREQ, 0, RREQ_RETRIES, src_ip,
 			dst_ip, tos);
 	update_timer_queue();

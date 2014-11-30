@@ -20,10 +20,6 @@ u_int8_t g_aodv_gateway;
 u_int8_t g_routing_metric;
 u_int32_t g_fixed_rate;
 
-#ifdef DEBUGC
-u_int32_t g_node_name;
-#endif
-
 //#ifdef DEBUGC
 //struct aodv_dev *g_eth_dev;
 //#endif
@@ -58,8 +54,11 @@ char *network_ip;
 unsigned int aodv_gateway;
 char g_aodv_dev[8];
 u_int32_t g_null_ip;
-int node_type;//wireless=0,wired=1,IMN=2
+//#ifdef DEBUGC
+u_int8_t g_node_type;//wireless=0,wired=1,IMN=2
 int g_dev_num;
+u_int32_t g_node_name;
+//#endif
 
 #ifdef BLACKLIST
 	char * aodv_blacklist[10];
@@ -256,7 +255,15 @@ static int __init init_fbaodv_module(void) {
 		goto out1;
 	}
 
+	g_node_type = get_node_type();
+	if(g_node_type==0)
+	{
+		printk("Wrong node type!\n");
+		goto out1;
+	}
+
 	printk("*************************************\n");
+	printk("Node Type:%d\n",g_node_type);
 	printk("subnet:%s\n",aodv_subnet);
 	printk("network_ip:%s\n",network_ip);
 	printk("gateway:%s\n",inet_ntoa(g_aodv_gateway));
@@ -367,7 +374,7 @@ static int __init init_fbaodv_module(void) {
 	return 0;
 
 	out1:
-	close_sock();
+	close_all_sock();
 
 	del_timer(&aodv_timer);
 	printk("Removed timer...\n");
@@ -406,7 +413,7 @@ static int __init init_fbaodv_module(void) {
 
 	printk("Unregistered NetFilter hooks...\n");
 
-	close_sock();
+	close_all_sock();
 	printk("Closed sockets...\n");
 
 	del_timer(&aodv_timer);
@@ -466,7 +473,7 @@ static void __exit cleanup_fbaodv_module(void)
 	nf_unregister_hook(&output_filter);
 	printk("Unregistered NetFilter hooks...\n");
 
-	close_sock();
+	close_all_sock();
 	printk("Closed sockets...\n");
 
 	del_timer(&aodv_timer);

@@ -141,34 +141,6 @@ int packet_in(struct sk_buff *packet, struct timeval tv) {
         printk("It's a rcvp message\n");
 #endif
 
-/*#ifdef DEBUGC
-char name[30];
-unsigned char if_port;
-int ifindex;
-unsigned short type;
-unsigned short dev_id;
-if(aodv_type != HELLO_MESSAGE){
-struct net_device *dev = packet->dev;
-strcpy(name,dev->name);
-if_port = dev->if_port;
-ifindex = dev->ifindex;
-type = dev->type;
-dev_id = dev->dev_id;
-char port[20];
-switch(if_port){
-	case IF_PORT_UNKNOWN:strcpy(port,"UNKNOWN");break;
-	case IF_PORT_10BASE2:strcpy(port,"10BASE2");break;
-	case IF_PORT_10BASET:strcpy(port,"10BASET");break;
-	case IF_PORT_AUI:strcpy(port,"AUI");break;
-        case IF_PORT_100BASET:strcpy(port,"100BASET");break;
-        case IF_PORT_100BASETX:strcpy(port,"100BASETX");break;
-        case IF_PORT_100BASEFX:strcpy(port,"100BASEFX");break;
-}
-printk("------------------------------------\ndev->name:%s\ndev->ifindex:%d\ndev->type:%d\ndev->dev_id:%d\ndev->if_port:%s\n----------------------------------\n",name,ifindex,type,dev_id,port);
-}
-
-#endif
-*/
 
 #ifdef DEBUG
 	if ( aodv_type != HELLO_MESSAGE )
@@ -292,7 +264,7 @@ switch(if_port){
         case IF_PORT_100BASETX:strcpy(port,"100BASETX");break;
         case IF_PORT_100BASEFX:strcpy(port,"100BASEFX");break;
 }
-printk("------------------------------------\ndev->name:%s\ndev->ifindex:%d\ndev->type:%d\ndev->dev_id:%d\ndev->if_port:%s\n----------------------------------\n",name,ifindex,type,dev_id,port);
+printk("-----------------in_handler-------------------\ndev->name:%s\ndev->ifindex:%d\ndev->type:%d\ndev->dev_id:%d\ndev->if_port:%s\n----------------------------------\n",name,ifindex,type,dev_id,port);
 }
 #endif
 
@@ -303,6 +275,12 @@ printk("------------------------------------\ndev->name:%s\ndev->ifindex:%d\ndev
 		printk("input_handler: Recv a %d Packet, from %s to %s\n",ip->protocol, src, dst);
 	}
 #endif
+
+/*#define DEBUG2
+	struct iphdr *ip= ip_hdr(skb);
+	if(ip->daddr)
+#endif*/
+
 	if (udp != NULL && ip->protocol == IPPROTO_UDP && skb->protocol == htons(ETH_P_IP) && udp->dest == htons(AODVPORT) && tmp_indev->ifa_list->ifa_address != ip->saddr) {
 
 		do_gettimeofday(&tv); //MCC - capture the time of arrival needed for ett_probes

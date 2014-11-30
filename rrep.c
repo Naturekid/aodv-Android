@@ -9,13 +9,13 @@ extern u_int32_t g_null_ip;
 extern aodv_route * g_local_route;
 
 void convert_rrep_to_host(rrep * tmp_rrep) {
-	tmp_rrep->dst_id = ntohl(tmp_rrep->dst_id);
+	tmp_rrep->dst_seq = ntohl(tmp_rrep->dst_seq);
 	tmp_rrep->src_id = ntohl(tmp_rrep->src_id);
 	tmp_rrep->path_metric = ntohl(tmp_rrep->path_metric);
 }
 
 void convert_rrep_to_network(rrep * tmp_rrep) {
-	tmp_rrep->dst_id = htonl(tmp_rrep->dst_id);
+	tmp_rrep->dst_seq = htonl(tmp_rrep->dst_seq);
 	tmp_rrep->src_id = htonl(tmp_rrep->src_id);
 	tmp_rrep->path_metric = htonl(tmp_rrep->path_metric);
 
@@ -28,7 +28,7 @@ int recv_rrep(task * tmp_packet) {
 	rrep *tmp_rrep;
 	u_int32_t path_metric;
 	int iam_destination = 0;
-#ifdef DEBUG
+#ifdef DEBUG2
 	char dst_ip[16];
 	char src_ip[16];
 #endif
@@ -56,7 +56,7 @@ int recv_rrep(task * tmp_packet) {
 				+ getcurrtime();
 	tmp_rrep->num_hops++;
 
-#ifdef DEBUG
+#ifdef DEBUG2
 
 	strcpy(src_ip, inet_ntoa(tmp_rrep->src_ip));
 	strcpy(dst_ip, inet_ntoa(tmp_rrep->dst_ip));
@@ -80,10 +80,10 @@ int recv_rrep(task * tmp_packet) {
 		//Create (or update) the first hop of the route
 
 		rreq_aodv_route(tmp_rrep->src_ip, tmp_rrep->dst_ip, tmp_rrep->tos, tmp_neigh, tmp_rrep->num_hops,
-				tmp_rrep->dst_id, tmp_packet->dev, path_metric);
+				tmp_rrep->dst_seq, tmp_packet->dev, path_metric);
 
 		
-		send_route = find_aodv_route_by_id(tmp_rrep->dst_ip, tmp_rrep->dst_id);
+		send_route = find_aodv_route_by_id(tmp_rrep->dst_ip, tmp_rrep->dst_seq);
 		delete_timer(tmp_rrep->src_ip, tmp_rrep->dst_ip, tmp_rrep->tos,
 					TASK_RESEND_RREQ);
 
@@ -170,7 +170,12 @@ printk("no brk links to this dst\n");
 			//it's a DTN hello rrep
 			recv_route = find_aodv_route(dtn_hello_ip,tmp_rrep->src_ip,tmp_rrep->tos);
 			if(recv_route){
-				new_recv = create_aodv_route(tmp_rrep->dst_ip,tmp_rrep->src_ip,tmp_rrep->tos,tmp_rrep->dst_id);
+				//1108
+				aodv_dev *tmp_aodvdev=recv_route->dev;
+				new_recv = create_aodv_route(tmp_rrep->dst_ip,tmp_rrep->src_ip,tmp_rrep->tos,tmp_rrep->dst_seq,tmp_aodvdev->dev);
+#ifdef DEBUG2
+	printk("--------------tmp_aodvdev:%s,ip:%s in recv rrep dtn hello---------------\n",tmp_aodvdev->name,inet_ntoa(tmp_aodvdev->ip));
+#endif
 				new_recv->last_hop = recv_route->last_hop;
 				new_recv->next_hop = recv_route->next_hop;
 
@@ -217,9 +222,9 @@ printk("no brk links to this dst\n");
 		//Create (or update) the route from source to destination
 		rreq_aodv_route(tmp_rrep->src_ip, tmp_rrep->dst_ip, tmp_rrep->tos,
 				tmp_neigh, tmp_rrep->num_hops,
-				tmp_rrep->dst_id, tmp_packet->dev, path_metric);
+				tmp_rrep->dst_seq, tmp_packet->dev, path_metric);
 
-		send_route = find_aodv_route_by_id(tmp_rrep->dst_ip, tmp_rrep->dst_id);
+		send_route = find_aodv_route_by_id(tmp_rrep->dst_ip, tmp_rrep->dst_seq);
 
 
 #ifdef DEBUG
@@ -258,7 +263,8 @@ printk("no brk links to this dst\n");
 		recv_route->last_hop = send_route->next_hop;
 
 		convert_rrep_to_network(tmp_rrep);
-		send_message(recv_route->next_hop, NET_DIAMETER, tmp_rrep, sizeof(rrep));
+		//1108
+		send_message(recv_route->next_hop, NET_DIAMETER, tmp_rrep, sizeof(rrep),recv_route->dev);
 
 	}
 
@@ -269,13 +275,14 @@ int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 	aodv_route *src_route;
 	rrep *tmp_rrep;
 
-#ifdef DEBUG0
+#ifdef DEBUG2
 	char src[16];
 	char dst[16];
 	strcpy (src, inet_ntoa(src_ip));
 	strcpy (dst, inet_ntoa(dst_ip));
 	printk("I'm generating a new rrep, from %s to %s\n",src, dst);
 #endif
+
 	if ((tmp_rrep = (rrep *) kmalloc(sizeof(rrep), GFP_ATOMIC)) == NULL) {
 #ifdef DEBUG
 		printk("Can't allocate new rrep\n");
@@ -325,9 +332,13 @@ int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 		
 			//add a new one from src to local ip
 			//do not remove the old one ,there may be some other neighbor to use it
-			g_local_route->dst_id = g_local_route->dst_id + 1;
-			new_route = create_aodv_route(g_mesh_ip, src_ip,tos,g_local_route->dst_id);
-
+			g_local_route->dst_seq = g_local_route->dst_seq + 1;
+			//1108
+			aodv_dev *tmp_aodvdev = src_route->dev;
+			new_route = create_aodv_route(tmp_aodvdev->ip,src_ip,tos,g_local_route->dst_seq,tmp_aodvdev->dev);
+#ifdef DEBUG2
+	printk("-----tmp_aodvdev:%s,route src is:%s in gen rrep dtn hello-----\n",tmp_aodvdev->name,inet_ntoa(tmp_aodvdev->ip));
+#endif
 			if(new_route==NULL) return 0;
 			new_route->next_hop = src_route->next_hop;
 			new_route->last_hop = NULL;
@@ -357,10 +368,10 @@ int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 	tmp_rrep->reserved1 = 0;
 	tmp_rrep->src_ip = src_route->dst_ip;
 	tmp_rrep->dst_ip = src_route->src_ip;//dst_ip;
-	g_local_route->dst_id = g_local_route->dst_id + 1;
-	tmp_rrep->dst_id = g_local_route->dst_id;
+	g_local_route->dst_seq = g_local_route->dst_seq + 1;
+	tmp_rrep->dst_seq = g_local_route->dst_seq;
 	tmp_rrep->num_hops = 0;
-	tmp_rrep->src_id = src_route->dst_id;
+	tmp_rrep->src_id = src_route->dst_seq;
 	tmp_rrep->tos = tos;
 	tmp_rrep->q=0;
 	tmp_rrep->path_metric = src_route->path_metric;
@@ -378,7 +389,7 @@ int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 
 
 	convert_rrep_to_network(tmp_rrep);
-	send_message(src_route->next_hop, NET_DIAMETER, tmp_rrep, sizeof(rrep));
+	send_message(src_route->next_hop, NET_DIAMETER, tmp_rrep, sizeof(rrep),src_route->dev);
 	kfree(tmp_rrep);
 	return 1;
 
