@@ -12,3 +12,34 @@ broadcast wireless and wired
 the g_local_route is binding to the first inited dev
 
 
+1026
+del code of ett and wcim
+with debug fs file in /proc/fbaodv/
+get new funs : find_neigh_by_name,find_net_dev_by_name
+
+1028
+modified local_broadcast in socket, add param aodv_dev *from_dev
+
+1030
+try to modified route things to adapt to inter-link
+
+1105
+get node type by go through the dev_list
+
+1106
+try to introduce the dev into create_aodv_route & the other 
+
+1113
+let the broadcast go out first from wired inface then wireless inface
+
+1120
+try to use the wired inface first between neighbor's data transmission.
+when node get hello,it will just setup neigh entry but not neigh route.
+when they has data to exchange,set up route using the best link--always is wired link
+
+1130
+change the field of dst_id to dst_seq
+let the smallest ip be the node name
+
+
+
