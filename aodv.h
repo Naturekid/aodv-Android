@@ -69,6 +69,10 @@
 #include <net/route.h>
 
 
+#define MN_NODE   100
+#define WDN_NODE  101
+#define ICN_NODE  110
+
 #define DTN_LOCATION_PORT 	10003
 #define AODV_LOCATION_PORT	10004         
 #define TASK_DTN_HELLO        121
@@ -77,9 +81,10 @@
 #define RECOVERYPATH 
 #define DTN
 //#define DEBUG
-#define CaiDebug
+//#define CaiDebug
 #define DEBUGC
 //#define DEBUG0
+#define DEBUG2
 #define extention               667
 #define DTNREGISTER		9999
 #define DTNPORT			10000
@@ -203,6 +208,7 @@
 #define TASK_RECV_RCVP  122
 #define RRDP_MESSAGE    123
 #define TASK_RECV_RRDP  123
+#define TASK_ROUTE_NEIGH	127
 
 //ST-AODV
 #define TASK_ST             106
@@ -233,6 +239,8 @@
 /////////////////////////////
 //ST- RREQ
 //////////////////////////////
+
+
 typedef struct {
 	u_int8_t type;
 
@@ -256,7 +264,7 @@ typedef struct {
 	u_int8_t second_reserved;
 	u_int8_t num_hops;
 	u_int32_t gw_ip;
-	u_int32_t dst_id;
+	u_int32_t dst_seq;
 	u_int32_t path_metric;
 
 #ifdef DTN_HELLO
@@ -274,6 +282,7 @@ typedef struct {
 #ifdef __BIG_ENDIAN_BITFIELD
 	u_int8_t j:1;
 	u_int8_t r:1;
+
 	u_int8_t g:1;
 	u_int8_t d:1;
 	u_int8_t u:1;
@@ -293,7 +302,7 @@ typedef struct {
 	u_int32_t gateway;
 	u_int32_t dst_ip;
 	u_int32_t src_ip;
-	u_int32_t dst_id;
+	u_int32_t dst_seq;
 	u_int32_t path_metric;
 
 #ifdef DTN_HELLO
@@ -325,7 +334,7 @@ typedef struct {
 
 	u_int32_t dst_ip;
 	u_int32_t src_ip;
-	u_int32_t dst_id;
+	u_int32_t dst_seq;
 	u_int32_t gateway;
 	u_int32_t path_metric;
 	u_int32_t src_id;
@@ -357,7 +366,7 @@ typedef struct {
 #endif
 	unsigned int dst_count :8;
 	u_int32_t dst_ip;
-	u_int32_t dst_id;
+	u_int32_t dst_seq;
 #ifdef DTN
 	u_int32_t last_avail_ip;
 	u_int32_t src_ip;
@@ -399,9 +408,10 @@ typedef struct {
 	//#error "Please fix <asm/byteorder.h>"
 #endif
 
-#ifdef DEBUGC
-	u_int32_t nodename;
-#endif
+//#ifdef DEBUGC
+	u_int32_t node_name;
+	u_int8_t node_type;
+//#endif
 	u_int8_t neigh_count;
 	u_int8_t num_hops;
 	u_int8_t reserved2;
@@ -431,7 +441,7 @@ typedef struct {
 #endif
 	unsigned int dst_count :8;
 	u_int32_t dst_ip;
-	u_int32_t dst_id;
+	u_int32_t dst_seq;
 	u_int32_t src_ip;
 #ifdef DTN
 	u_int32_t last_avail_ip;
@@ -455,7 +465,7 @@ typedef struct {
 #endif
 	unsigned int dst_count :8;
 	u_int32_t dst_ip;
-	//u_int32_t dst_id;	
+	//u_int32_t dst_seq;	
 	u_int32_t src_ip;
 	unsigned char tos;
 } rrdp;
@@ -468,7 +478,7 @@ struct _brk_link {
 
 	u_int32_t dst_ip;
 	u_int32_t src_ip;
-	u_int32_t dst_id;
+	u_int32_t dst_seq;
 
 	u_int8_t state :2;
 
@@ -591,7 +601,7 @@ struct _aodv_route {
 
 	u_int32_t dst_ip;
 	u_int32_t src_ip;
-	u_int32_t dst_id;
+	u_int32_t dst_seq;
 
 	u_int32_t path_metric;
 	unsigned char tos;
@@ -663,9 +673,10 @@ typedef struct _load_params{
 
 //AODV_NEIGH
 struct _aodv_neigh {
-#ifdef DEBUGC
-	u_int32_t neigh_name; 
-#endif
+//#ifdef DEBUGC
+	u_int32_t neigh_name;
+	u_int8_t neigh_type; 
+//#endif
 	u_int32_t ip;
 	u_int64_t lifetime;
 	struct net_device *dev;
@@ -690,7 +701,7 @@ typedef struct _gw_entry {
 	u_int32_t metric;
 	//MCC - Implementation
 	u_int8_t num_hops;
-	u_int32_t dst_id;
+	u_int32_t dst_seq;
 	struct _gw_entry *next;
 //
 
@@ -701,6 +712,7 @@ typedef struct _gw_entry {
 typedef struct _aodv_neigh_2h {
 	u_int32_t ip;
 	u_int64_t lifetime;
+
 	u_int8_t load;
 	u_int16_t load_seq;
 	struct _aodv_neigh_2h *next;
@@ -753,11 +765,13 @@ struct services {
 #include "timer_queue.h"
 #include "utils.h"
 #include "tos.h"
-
+#include "aodv_config.h"
 //#ifdef RECOVERYPATH
 
 #include "brk_list.h"
 #include "rcvp.h"
+
+
 
 //#endif
 
