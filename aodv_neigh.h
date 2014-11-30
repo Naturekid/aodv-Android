@@ -24,9 +24,11 @@ int read_node_load_proc(char *buffer, char **buffer_location, off_t offset,
 		int buffer_length, int *eof, void *data);
 aodv_neigh *first_aodv_neigh(void);
 //aodv_neigh *create_aodv_neigh(u_int32_t ip);
-aodv_neigh *create_aodv_neigh(u_int32_t neigh_name,u_int32_t ip);
+aodv_neigh *create_aodv_neigh(u_int32_t neigh_name,u_int8_t neigh_type,u_int32_t ip,struct net_device *in_dev);
 int delete_aodv_neigh(u_int32_t ip);
-int route_aodv_neigh( u_int32_t ip);
+int route_aodv_neigh( u_int32_t ip,struct net_device *in_dev);
+aodv_neigh *find_neigh_by_name(u_int32_t name);
+aodv_neigh *get_better_link(aodv_neigh *cur_neigh);
 void cleanup_neigh_routes(void);
 void neigh_read_lock(void);
 void neigh_read_unlock(void);

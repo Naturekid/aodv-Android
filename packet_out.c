@@ -17,6 +17,7 @@ extern u_int8_t g_aodv_gateway;
 extern u_int32_t g_null_ip;
 extern u_int8_t g_routing_metric;
 extern int initialized;
+extern aodv_route *g_local_route;
 
 unsigned int output_handler(unsigned int hooknum, struct sk_buff *skb,
 		const struct net_device *in, const struct net_device *out, int (*okfn) (struct sk_buff *)) {
@@ -42,6 +43,7 @@ unsigned int output_handler(unsigned int hooknum, struct sk_buff *skb,
 	
 #endif
 */
+
 	if (!initialized) { // this is required otherwise kernel calls this function without insmod completing the module loading process.
 		return NF_ACCEPT;
 	}
@@ -81,7 +83,19 @@ unsigned int output_handler(unsigned int hooknum, struct sk_buff *skb,
 	}
 #endif
 	if ((tmp_route == NULL) || (tmp_route->state == INVALID)) {
-		if (source == g_mesh_ip || (source == g_null_ip && g_aodv_gateway)) {
+
+		//deal with neighboor route
+		if( is_local_ip(source) && (find_aodv_neigh(destination)!=NULL) ){
+			printk("It's 1 hop data\n");
+			task *new_task;
+			new_task = create_task(TASK_ROUTE_NEIGH);
+			new_task->src_ip = source;
+			new_task->dst_ip = destination;
+			new_task->tos = ip->tos;
+			insert_task_at_front(new_task);
+			return NF_ACCEPT;
+		}
+		else if (is_local_ip(source) || (source == g_null_ip && g_aodv_gateway)) {
 //			if (gen_rreq(source, destination, ip->tos)){
 //				//printk("the tos is %s in packet_out.c\n");
 //				printk("NF_QUEUE1\n");
@@ -91,6 +105,7 @@ unsigned int output_handler(unsigned int hooknum, struct sk_buff *skb,
 //				printk("NF_DROP2\n");
 //				return NF_DROP;
 //			}
+
 			task *new_task;
 			new_task = create_task(TASK_GEN_RREQ);
 			new_task->src_ip = source;
@@ -107,6 +122,7 @@ unsigned int output_handler(unsigned int hooknum, struct sk_buff *skb,
 		}
 	}
 	else{
+		printk("We got routes already in out_handler\n");
 		if (tmp_route->state==REPLIED) {
 			tmp_route->state = ACTIVE;
 /*

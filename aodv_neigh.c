@@ -170,7 +170,7 @@ void cleanup_neigh_routes() {
 	}
 }
 
-aodv_neigh *create_aodv_neigh(u_int32_t neigh_name,u_int32_t ip) {
+aodv_neigh *create_aodv_neigh(u_int32_t neigh_name,u_int8_t neigh_type,u_int32_t ip,struct net_device *in_dev) {
 	aodv_neigh *new_neigh;
 	aodv_neigh *prev_neigh = NULL;
 	aodv_neigh *tmp_neigh = NULL;
@@ -198,24 +198,32 @@ aodv_neigh *create_aodv_neigh(u_int32_t neigh_name,u_int32_t ip) {
 		kfree(new_neigh);
 		return NULL;
 	}
-	
-	if (!route_aodv_neigh(ip)){
+//delay the neigh route setting
+/*	
+	if (!route_aodv_neigh(ip,in_dev)){
 #ifdef DEBUG
 		printk("AODV_NEIGH: Error in kernel route creation\n");
 #endif
 		kfree(new_neigh);
 		return NULL;
 	}
+*/
 			
 	neigh_write_lock(); //to avoid conflicts with read_neigh_proc and packet_out.c (uncontrolled interruption)
 #ifdef DEBUGC
 	new_neigh->neigh_name = neigh_name;
+	new_neigh->neigh_type = neigh_type;
 #endif
 	new_neigh->ip = ip;
 	new_neigh->lifetime = 0;
 	new_neigh->etx_metric = new_neigh->recv_rate = 0; 
 	new_neigh->send_rate = g_fixed_rate;
-	new_neigh->dev = g_mesh_dev->dev;
+//add dev
+	new_neigh->dev = in_dev;
+#ifdef DEBUG2
+	printk("The neigh's income dev is %s in create_aodv_neigh\n",in_dev->name);
+#endif
+//
 	new_neigh->next = NULL;
 	
 /*
@@ -240,26 +248,34 @@ aodv_neigh *create_aodv_neigh(u_int32_t neigh_name,u_int32_t ip) {
 	return new_neigh;
 }
 
-int route_aodv_neigh(u_int32_t neigh_ip) {
+int route_aodv_neigh(u_int32_t neigh_ip,struct net_device *in_dev) {
 	src_list_entry *tmp_src_entry;
 	aodv_route *tmp_route;
 	int error; 
-	tmp_route = create_aodv_route(g_mesh_ip, neigh_ip, 0, g_local_route->dst_id);
+	
+	aodv_dev *tmp_dev = get_netdev_by_name(in_dev->name);
+	if(tmp_dev==NULL) return 0;
+
+	tmp_route = create_aodv_route(tmp_dev->ip, neigh_ip, 0, g_local_route->dst_seq,in_dev);
+
 	if (tmp_route == NULL) 
 		return 0;
 	
 	tmp_route->num_hops = 1;
 	tmp_route->path_metric = 1;
-	tmp_route->dev = g_mesh_dev;
+	tmp_route->dev = tmp_dev;
+#ifdef DEBUG2
+	printk("The neigh's route->dev is %s in route_aodv_neigh\n",tmp_dev->name);
+#endif
 	tmp_route->state = ACTIVE;
 	tmp_route->neigh_route = TRUE;
 	tmp_route->self_route = TRUE;
 	
-	tmp_src_entry = find_src_list_entry(g_mesh_ip);
+	tmp_src_entry = find_src_list_entry(tmp_dev->ip);
 		if (tmp_src_entry == NULL)
 			return 0;	
 	error = rpdb_route(RTM_NEWROUTE, tmp_src_entry->rt_table, 0, g_mesh_ip,
-			neigh_ip, neigh_ip, g_mesh_dev->index, 1);
+			neigh_ip, neigh_ip, tmp_dev->index, 1);
 
 	if (error < 0) {
 		printk(
@@ -374,6 +390,32 @@ int read_neigh_proc(char *buffer, char **buffer_location, off_t offset,
 	neigh_read_unlock();
 
 return len;
+}
+
+aodv_neigh *get_better_link(aodv_neigh *cur_neigh)
+{
+	u_int32_t neigh_name=cur_neigh->neigh_name;
+	aodv_neigh *tmp_neigh = aodv_neigh_list;
+
+	while(tmp_neigh)
+	{	
+		if( (tmp_neigh->neigh_name==neigh_name) && (strncmp(tmp_neigh->dev->name,"eth",3)==0) )
+			return tmp_neigh;
+		tmp_neigh = tmp_neigh->next;
+	}
+	return NULL;
+}
+
+aodv_neigh *find_neigh_by_name(u_int32_t name)
+{
+	aodv_neigh *tmp_neigh = aodv_neigh_list;
+	while(tmp_neigh)
+	{	
+		if(tmp_neigh->neigh_name == name)
+			return tmp_neigh;
+		tmp_neigh = tmp_neigh->next;
+	}
+	return NULL;
 }
 
 

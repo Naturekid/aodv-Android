@@ -92,10 +92,13 @@ int send_hello(helloext_struct *total_ext, int num_neigh) {
 
 	tmp_hello = (hello *) data;
 	tmp_hello->type = HELLO_MESSAGE;
-#ifdef DEBUGC
-	extern g_node_name;
-	tmp_hello->nodename = g_node_name;
-#endif
+//#ifdef DEBUGC
+	extern u_int32_t g_node_name;
+	extern u_int8_t g_node_type;
+	tmp_hello->node_name = g_node_name;
+	tmp_hello->node_type = g_node_type;
+	
+//#endif
 	tmp_hello->reserved1 = 0;
 	tmp_hello->num_hops = 0;
 	tmp_hello->neigh_count = num_neigh;
@@ -117,7 +120,7 @@ int send_hello(helloext_struct *total_ext, int num_neigh) {
 				+ sizeof(hello_extension);
 	}
 
-	local_broadcast(1, data, hello_size);
+	local_broadcast(1, data, hello_size,NULL);
 	kfree(data);
 	//random jitter
 	get_random_bytes(&rand, sizeof (rand));
@@ -213,12 +216,12 @@ int recv_hello(task * tmp_packet) {
 		} else
 		{
 			char neigh_name[20];
-			strcpy(neigh_name,inet_ntoa(tmp_hello->nodename));
+			strcpy(neigh_name,inet_ntoa(tmp_hello->node_name));
 			printk("\nNEW NEIGHBOR_1HOP DETECTED:%s : %s\n",
 					neigh_name,inet_ntoa(tmp_packet->src_ip));
 		}
 
-		hello_orig = create_aodv_neigh(tmp_hello->nodename,tmp_packet->src_ip);
+		hello_orig = create_aodv_neigh(tmp_hello->node_name,tmp_hello->node_type,tmp_packet->src_ip,tmp_packet->dev);
 
 		if (!hello_orig) {
 #ifdef DEBUG
