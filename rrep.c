@@ -65,12 +65,13 @@ int recv_rrep(task * tmp_packet) {
 	printk("g_mesh_ip is %s\n", inet_ntoa(g_mesh_ip));
 #endif
 
-	if (tmp_rrep->src_ip == g_mesh_ip || (tmp_rrep->src_ip == g_null_ip && tmp_rrep->gateway == g_mesh_ip))
+	if( is_local_ip(tmp_rrep->src_ip) || ( tmp_rrep->src_ip == g_null_ip && is_local_ip(tmp_rrep->gateway) ))
+	//if (tmp_rrep->src_ip == g_mesh_ip || (tmp_rrep->src_ip == g_null_ip && tmp_rrep->gateway == g_mesh_ip))
 		iam_destination = 1;
 //printk("--------------rrep:%s--------------\n",inet_ntoa(tmp_rrep->src_ip));
 	if (iam_destination) { //I'm the source of the flow (the destination of the RREP)
 
-#ifdef DEBUG
+#ifdef DEBUG2
 		printk("I'm the source of the flow (the destination of the RREP)\n");
 #endif
 		
@@ -88,13 +89,20 @@ int recv_rrep(task * tmp_packet) {
 					TASK_RESEND_RREQ);
 
 		if (!send_route) {
-#ifdef DEBUG
+#ifdef DEBUG2
 			printk("No reverse-route for RREP from: %s to: %s with TOS %u\n", dst_ip, src_ip, tmp_rrep->tos);
 #endif
 			return 0;
 		}
 
 		rrep_aodv_route(send_route);
+#ifdef 	DEBUG2
+//strcpy(dst_ip,send_route->);
+//strcpy();
+//strcpy();
+#endif
+printk("------------rrep_aodv_route in recv_rrep------------\n");
+		//1130 to be modified.NOW can't ensure is OK or not when DTN HELLO
 		send_route->last_hop = g_mesh_ip;
 
 #ifdef DTN_HELLO
@@ -173,7 +181,7 @@ printk("no brk links to this dst\n");
 				//1108
 				aodv_dev *tmp_aodvdev=recv_route->dev;
 				new_recv = create_aodv_route(tmp_rrep->dst_ip,tmp_rrep->src_ip,tmp_rrep->tos,tmp_rrep->dst_seq,tmp_aodvdev->dev);
-#ifdef DEBUG2
+#ifdef DEBUG
 	printk("--------------tmp_aodvdev:%s,ip:%s in recv rrep dtn hello---------------\n",tmp_aodvdev->name,inet_ntoa(tmp_aodvdev->ip));
 #endif
 				new_recv->last_hop = recv_route->last_hop;
@@ -212,7 +220,7 @@ printk("no brk links to this dst\n");
 #endif
 
 		if (!recv_route) {
-#ifdef DEBUG
+#ifdef DEBUG2
 			printk("Reverse Route has timed out! - RREP is not forwarded!\n");
 #endif
 			return 1;
@@ -239,7 +247,7 @@ printk("no brk links to this dst\n");
 			return 0;
 		}
 
-#ifdef CaiDebug
+#ifdef DEBUG2`
 	aodv_route *tmp_route;
 	tmp_route = first_aodv_route();
 	char src[20];
@@ -258,7 +266,9 @@ printk("no brk links to this dst\n");
 	}
 #endif
 		rrep_aodv_route(recv_route);
+printk("---------rrep 7---------\n");
 		rrep_aodv_route(send_route);
+printk("---------rrep 8---------\n");
 		send_route->last_hop = recv_route->next_hop;
 		recv_route->last_hop = send_route->next_hop;
 
@@ -267,13 +277,14 @@ printk("no brk links to this dst\n");
 		send_message(recv_route->next_hop, NET_DIAMETER, tmp_rrep, sizeof(rrep),recv_route->dev);
 
 	}
-
+printk("---------end in recv rrep----------\n");
 	return 0;
 }
 
 int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 	aodv_route *src_route;
 	rrep *tmp_rrep;
+
 
 #ifdef DEBUG2
 	char src[16];

@@ -457,14 +457,14 @@ printk("end in rreq route\n");
 int rrep_aodv_route(aodv_route *rep_route){
 	int error = 0;
 	src_list_entry * tmp_src_entry;
-#ifdef DEBUG
+#ifdef DEBUG2
 	char src[16];
 	char dst[16];
 #endif
 	
 	tmp_src_entry = find_src_list_entry(rep_route->src_ip);
 	if (tmp_src_entry == NULL) {
-#ifdef DEBUG
+#ifdef DEBUG2
 		printk ("rrep_aodv_route: tmp_src_entry is NULL!!\n");
 #endif
 		return 0;
@@ -483,12 +483,13 @@ int rrep_aodv_route(aodv_route *rep_route){
 
 	
 	route_write_lock(); //lifetime and route_valid are modified or read in packet_out.c - avoid conflicts
+	
 	rep_route->state = REPLIED;
 	rep_route->lifetime = getcurrtime() + DELETE_PERIOD;
 	route_write_unlock();
 	ipq_send_ip(rep_route->src_ip, rep_route->dst_ip, rep_route->tos);
 	
-#ifdef DEBUG
+#ifdef DEBUG2
 	strcpy(src, inet_ntoa(rep_route->src_ip));
 	strcpy(dst, inet_ntoa(rep_route->dst_ip));
 

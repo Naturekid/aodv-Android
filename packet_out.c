@@ -131,7 +131,7 @@ unsigned int output_handler(unsigned int hooknum, struct sk_buff *skb,
 */
 		}
 		tmp_route->lifetime = getcurrtime() + ACTIVE_ROUTE_TIMEOUT;
-#ifdef DEBUG
+#ifdef DEBUG2
 	if (tmp_route) {
 		char src[16];
 		char dst[16];

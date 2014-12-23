@@ -95,6 +95,8 @@
 #define FALSE 			0
 #define BLACKLIST               111
 #define REPAIR			333
+
+
 // See section 10 of the AODV draft
 // Times in milliseconds
 #define ACTIVE_ROUTE_TIMEOUT 	4800
@@ -128,6 +130,7 @@
 #define ST_INTERVAL           10000
 #define ACTIVE_GWROUTE_TIMEOUT 	(ST_INTERVAL * 2) + 1000
 #define TIMEOUT_DELAY_ROUTE_UPDATE 1000 // 1 second //MCC - Unused
+
 /*
 //ETT Definitions
 #define ETT_INTERVAL	60000 //1 minute by default
@@ -235,6 +238,38 @@
 
 #define TASK_GEN_RREQ 132
 
+/*
+//Configuration Parameters
+typedef struct {
+unsigned int ACTIVE_ROUTE_TIMEOUT;
+unsigned int BRK_LINK_TIMEOUT;
+unsigned int ALLOWED_HELLO_LOSS;//MCC - Changed to increment the possibility of having a bad ETX metric
+unsigned int BLACKLIST_TIMEOUT;//RREQ_RETRIES * NET_TRAVERSAL_TIME
+unsigned int DELETE_PERIOD;//ALLOWED_HELLO_LOSS * HELLO_INTERVAL
+unsigned int HELLO_INTERVAL;//1000
+unsigned int LOCAL_ADD_TTL;//2
+unsigned int MAX_REPAIR_TTL;//0.3 * NET_DIAMETER
+unsigned int MY_ROUTE_TIMEOUT;//ACTIVE_ROUTE_TIMEOUT
+unsigned int NET_DIAMETER;//10
+unsigned int NODE_TRAVERSAL_TIME;//40
+unsigned int NET_TRAVERSAL_TIME;//2 * NODE_TRAVERSAL_TIME * NET_DIAMETER
+unsigned int NEXT_HOP_WAIT;//NODE_TRAVERSAL_TIME + 10
+unsigned int PATH_DISCOVERY_TIME;//2 * NET_TRAVERSAL_TIME
+unsigned int RERR_RATELIMIT;//10
+unsigned int RING_TRAVERSAL_TIME;//2 * NODE_TRAVERSAL_TIME * ( TTL_VALUE + TIMEOUT_BUFFER)
+unsigned int RREQ_RETRIES;//2
+unsigned int RREQ_RATELIMIT;//10
+unsigned int TIMEOUT_BUFFER;//2
+unsigned int TTL_START;//2
+unsigned int TTL_INCREMENT;//2
+unsigned int TTL_THRESHOLD;//7
+unsigned int TTL_VALUE;//3
+unsigned int DTTL;//15
+unsigned int ST_INTERVAL;//10000
+unsigned int ACTIVE_GWROUTE_TIMEOUT;//(ST_INTERVAL * 2) + 1000
+unsigned int TIMEOUT_DELAY_ROUTE_UPDATE;//1000 // 1 second //MCC - Unused
+}config_params;
+*/
 //Packet Definitions
 /////////////////////////////
 //ST- RREQ

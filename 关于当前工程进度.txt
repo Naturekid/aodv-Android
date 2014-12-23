@@ -42,4 +42,11 @@ change the field of dst_id to dst_seq
 let the smallest ip be the node name
 
 
+1130
+change "some_ip==g_mesh_ip" to is_local_ip(some_ip) in rreq & rrep
+
+1207
+Change the linaro-kernel code in /net/ipv4/ip_forward.c & mm/slab.c
+The other changes I have forgot
+
 

@@ -374,6 +374,7 @@ static int __init init_fbaodv_module(void) {
 	return 0;
 
 	out1:
+printk("Devices error,cancel the init module--out1\n");
 	close_all_sock();
 
 	del_timer(&aodv_timer);
@@ -383,7 +384,8 @@ static int __init init_fbaodv_module(void) {
 	printk("Cleaned up AODV Queues...\n");
 
 	if (aodv_route_table != NULL)
-	cleanup_aodv_route_table();
+		cleanup_aodv_route_table();
+	printk("Cleaned up AODV Route Table...\n");
 
 	flush_src_list();
 	printk("Cleaned up Route and Rule Tables...\n");
@@ -393,6 +395,7 @@ static int __init init_fbaodv_module(void) {
 	return(-1);
 
 	out2:
+printk("File is empty,cancel the init module--out2\n");
 
 	remove_proc_entry("fbaodv/routes",NULL);
 	remove_proc_entry("fbaodv/timers",NULL);
@@ -427,7 +430,10 @@ static int __init init_fbaodv_module(void) {
 	printk("Cleaned up AODV Queues...\n");
 
 	cleanup_neigh_routes();
-	cleanup_aodv_route_table();
+printk("Cleaned up Neighbor Route Table...\n");
+	if (aodv_route_table != NULL)
+		cleanup_aodv_route_table();
+printk("Cleaned up AODV Route Table...\n");
 	flush_src_list();
 	printk("Cleaned up Route and Rule Tables...\n");
 
@@ -488,6 +494,7 @@ static void __exit cleanup_fbaodv_module(void)
 
 	cleanup_neigh_routes();
 	cleanup_aodv_route_table();
+printk("Cleaned up AODV Route Table...\n");
 	flush_src_list();
 	printk("Cleaned up Route and Rule Tables...\n");
 

@@ -38,7 +38,9 @@ int recv_rreq(task * tmp_packet) {
 	printk("get dev %s from task in recv rreq\n",task_dev->name);
 #endif
 
-	if (tmp_rreq->dst_ip == g_mesh_ip || tmp_rreq->gateway == g_mesh_ip)
+	//20141130
+	//if (tmp_rreq->dst_ip == g_mesh_ip || tmp_rreq->gateway == g_mesh_ip)
+	if(is_local_ip(tmp_rreq->dst_ip) || is_local_ip(tmp_rreq->gateway))	
 		iam_destination = 1;
 
 	if (tmp_packet->ttl <= 1 && !iam_destination) //If i'm destination, i can receive it
@@ -65,15 +67,16 @@ int recv_rreq(task * tmp_packet) {
 	update_timer_queue();
 	tmp_neigh->lifetime = HELLO_INTERVAL * (1 + ALLOWED_HELLO_LOSS) + 20
 			+ getcurrtime();
-
-	if (g_mesh_ip == tmp_rreq->src_ip) {
+	//20141130
+	//if (g_mesh_ip == tmp_rreq->src_ip) {
+	if(is_local_ip(tmp_rreq->src_ip)){
 #ifdef DEBUG
 		printk("I'm the generator of the incoming RREQ - Discarted\n");
 #endif
 		return 1;
 	}
 
-	if (g_aodv_gateway && tmp_rreq->dst_ip == g_null_ip && tmp_rreq->gateway != g_mesh_ip) {
+	if (g_aodv_gateway && tmp_rreq->dst_ip == g_null_ip && !is_local_ip(tmp_rreq->gateway)){//tmp_rreq->gateway != g_mesh_ip) {
 #ifdef DEBUG
 		printk("I'm not the gateway of this source - I cannot apply as an intermediate node to its default route\n");
 #endif

@@ -145,14 +145,18 @@ void cleanup_neigh_routes() {
 
 	tmp_neigh = aodv_neigh_list;
 
-	tmp_src_entry = find_src_list_entry(g_mesh_ip);
+	extern u_int32_t local_ip_list[10];
+	int i = 1;
+	for(i=1;i<local_ip_list[0];i++)
+{
+	tmp_src_entry = find_src_list_entry(local_ip_list[i]);
 	if (tmp_src_entry == NULL)
 		return;
 
 	while (tmp_neigh) {
 
 		error = rpdb_route(RTM_DELROUTE, tmp_src_entry->rt_table, NO_TOS,
-				g_mesh_ip, tmp_neigh->ip, tmp_neigh->ip, tmp_neigh->dev->ifindex,
+				local_ip_list[i], tmp_neigh->ip, tmp_neigh->ip, tmp_neigh->dev->ifindex,
 				1);
 		if (error < 0) {
 			printk(
@@ -161,13 +165,14 @@ void cleanup_neigh_routes() {
 
 		}
 		
-		tmp_route = find_aodv_route(g_mesh_ip, tmp_neigh->ip, 0);
+		tmp_route = find_aodv_route(local_ip_list[i], tmp_neigh->ip, 0);
 		if (tmp_route)
 			remove_aodv_route(tmp_route);
 		
 		
 		tmp_neigh = tmp_neigh->next;
 	}
+}
 }
 
 aodv_neigh *create_aodv_neigh(u_int32_t neigh_name,u_int8_t neigh_type,u_int32_t ip,struct net_device *in_dev) {

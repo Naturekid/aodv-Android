@@ -334,3 +334,17 @@ aodv_dev *get_netdev_by_name(char *name)
 	return NULL;
 }
 
+aodv_dev *get_netdev_by_index(int index)
+{
+	aodv_dev *tmp_dev = net_dev_list;
+	
+	while(tmp_dev)
+	{	
+		if(tmp_dev->index==index)
+			return tmp_dev;
+		tmp_dev = tmp_dev->next;
+	}
+
+	return NULL;
+}
+

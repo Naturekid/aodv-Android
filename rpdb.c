@@ -48,7 +48,7 @@ int rpdb_rule(unsigned char type, int rt_table, u_int32_t ip_src,
 				error);
 		return (-1);
 	}
-
+//how to modified it is thinking
 	init_sock(rl_socket, g_mesh_ip, g_aodv_dev);
 	// initalize RTNETLINK request buffer
 
@@ -199,7 +199,7 @@ int rpdb_route(unsigned char type, int rt_table, unsigned char tos,
 	strcpy(src, inet_ntoa(ip_src));
 	strcpy(dst, inet_ntoa(ip_dst));
 	strcpy(nex, inet_ntoa(ip_gw));
-	printk("RPDB: Adding or deleting a route %s to %s via %s,type is %c\n", src, dst, nex,type);
+	printk("RPDB: Adding or deleting a route %s to %s via %s,dev_index is %d\n", src, dst, nex,dev_index);
 #endif
 	error = sock_create(AF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE, &rt_socket);
 	if (error < 0) {
@@ -208,7 +208,15 @@ int rpdb_route(unsigned char type, int rt_table, unsigned char tos,
 		return (-1);
 	}
 
-	init_sock(rt_socket, g_mesh_ip, g_aodv_dev);
+//1203 modified,trying,not sure
+aodv_dev *dev = get_netdev_by_index(dev_index);
+if( dev != NULL )
+{ 
+	printk("");	
+	init_sock(rt_socket,dev->ip,dev);
+}
+else init_sock(rt_socket, g_mesh_ip, g_aodv_dev);
+//	init_sock(rt_socket, g_mesh_ip, g_aodv_dev);
 
 	memset(&req, 0, sizeof(req));
 	memset(&rtap, 0, sizeof(rtap));

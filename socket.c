@@ -526,7 +526,7 @@ printk("abdc\n");
 
 
     	space = sock_wspace(tmp_dev->sock->sk);
-printk("abdc11\n");
+
     	if (space < datalen)
     	{
         	printk("Space: %d, Data: %d \n", space, (int)datalen);
@@ -551,6 +551,7 @@ printk("abdc11\n");
         	printk("Error sending! err no: %d, Dst: %s\n", len, inet_ntoa(dst_ip));
     	}
     	set_fs(oldfs);
+printk("abdc11\n");
     	return 0;
 }
 
