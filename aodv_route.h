@@ -28,7 +28,9 @@ int flush_aodv_route_table(void);
 
 aodv_route *find_aodv_route(u_int32_t src_ip, u_int32_t dst_ip,
 		unsigned char tos);
+aodv_route *find_rediscovery_aodv_route(u_int32_t src_ip, u_int32_t dst_ip,unsigned char tos);
 aodv_route *find_aodv_route_by_id(u_int32_t dst_ip, u_int32_t dst_id);
+
 
 aodv_route *create_aodv_route(u_int32_t src_ip, u_int32_t dst_ip,
 		unsigned char tos, u_int32_t dst_id,struct net_device *dev);
@@ -37,7 +39,7 @@ aodv_route *first_aodv_route(void);
 void remove_aodv_route(aodv_route * dead_route);
 int rreq_aodv_route(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos,
 		aodv_neigh *next_hop, u_int8_t metric, u_int32_t dst_id,
-		struct net_device *dev, u_int32_t path_metric);
+		struct net_device *dev, u_int32_t path_metric,u_int8_t rd);
 int rrep_aodv_route(aodv_route *tmp_route);
 #ifdef RECOVERYPATH
 int is_overlapped_with_route(brk_link *tmp_link);

@@ -9,7 +9,7 @@
 #include "aodv.h"
 
 int recv_rreq(task * tmp_packet);
-int gen_rreq(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos);
+int gen_rreq(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos, u_int8_t rd);
 int resend_rreq(task * tmp_packet);
 
 #endif

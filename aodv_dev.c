@@ -234,7 +234,6 @@ printk("-----------new dev ip %s--------\n",inet_ntoa(new_dev->ip));
 		return NULL;
 	}
 	
-printk("---------create net dev  999---------\n");
 	return new_dev;
 
 }
@@ -242,7 +241,7 @@ printk("---------create net dev  999---------\n");
 int insert_net_dev(struct net_device *dev) {
 	aodv_dev *new_dev;
 	int error=0;
-printk("----------i n d 1----------------\n");
+
 	char netmask[16];
 
 	new_dev = create_net_dev(dev);
@@ -308,9 +307,9 @@ int init_net_dev(char *name) {
 	if ( dev != NULL ) {
 		//set the ip and netmask
 		tmp_indev = (struct in_device *) dev->ip_ptr;
-printk("init_net_dev \n");
+
 		if (tmp_indev && (tmp_indev->ifa_list != NULL)) {
-printk("init_net_dev not null\n");
+
 			error = insert_net_dev(dev);
 			dev_put(dev); //free the device!!
 			return error;
@@ -341,16 +340,14 @@ aodv_dev *get_netdev_by_name(char *name)
 aodv_dev *get_netdev_by_index(int index)
 {
 	aodv_dev *tmp_dev = net_dev_list;
-printk("------get_netdev_by_index11-------\n");	
+
 	while(tmp_dev!=NULL)
 	{	
 		if(tmp_dev->index==index)
 			return tmp_dev;
 
 		tmp_dev = tmp_dev->next;
-printk("------get_netdev_by_index22-------\n");	
 	}
-printk("------get_netdev_by_index33-------\n");	
 	return NULL;
 }
 

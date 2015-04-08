@@ -15,7 +15,7 @@
 #include "aodv.h"
 
 int recv_rrep(task * tmp_packet);
-int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos);
+int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos, u_int8_t rd);
 
 
 #endif

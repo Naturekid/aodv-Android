@@ -146,6 +146,14 @@ int is_control_task(int type){
 		case TASK_DTN_HELLO:
 #endif
 		case TASK_GEN_RREQ:
+#ifdef RRediscovery
+		case TASK_GEN_RRREQ:
+		
+		case TASK_GEN_RRREP:
+		
+		case TASK_RECV_TCNP:
+#endif		
+		
 			return 1;
 
 

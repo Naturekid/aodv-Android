@@ -122,7 +122,9 @@ unsigned int output_handler(unsigned int hooknum, struct sk_buff *skb,
 		}
 	}
 	else{
+#ifdef DEBUG
 		printk("We got routes already in out_handler\n");
+#endif
 		if (tmp_route->state==REPLIED) {
 			tmp_route->state = ACTIVE;
 /*

@@ -61,4 +61,20 @@ add tcnp.c .h to manage network topoloy change notification packet
 1221
 aodv.h add new TASK tcnp & gen rrrp, add tcnp data strcuture
 
+1222
+add TASK_GEN_RRREQ, TASK_GEN_RRREP& TASK_RECV_TCNP in aodv.h , task_queue.c &aodv_thread.c
+add a field of rediscovery in rreq&rrep.this field means that if the rreq or rrep is a rediscovery packert.If it's,do not return rrep anyway.And ,when route rreq and rrep,we should manage it in other way.
+
+1223
+add gen_tcnp or gen_rreq with rediscovery is set in recv hello in hello.c.
+code--when get a rreq with rediscovery is set.Compare the hop_nums in rreq and the one of route.And set the smaller as a better route.
+
+1230
+add rediscovery in aodv_route.rreq & rrep will deal with routing recording it.
+
+2015
+0103
+recv_rreq & rreq_aodv_route增加处理r字段为1的部分。在rreq_aodv_route处理中，不处理收到的第二个带rediscovery为1的rreq，处理首个时，直接建立路由且该路由的r字段设置为1，以为原有的route区分。
+
+
 

@@ -11,6 +11,7 @@
 #include "hello.h"
 
 extern u_int32_t g_mesh_ip;
+extern u_int32_t g_null_ip;
 extern u_int8_t g_routing_metric;
 extern aodv_neigh *aodv_neigh_list;
 extern aodv_dev *g_mesh_dev;
@@ -318,15 +319,33 @@ int recv_hello(task * tmp_packet) {
 #endif
 
 		
-#ifdef	TCNP
+#ifdef	RRediscovery
 //tcnp means Topology Change Notification Packet
 		if(tmp_hello->node_type == WDN_NODE || tmp_hello->node_type==ICN_NODE){
 			tmp_route = first_aodv_route();
 			while(tmp_route && tmp_route->state != INVALID){
-				if( (tmp_route->src_ip != tmp_route->dst_ip)
-					&& !is_local_ip(tmp_route->src_ip) ){//not self route
-
-					gen_tcnp(tmp_route->src_ip,tmp_route->dst_ip,tmp_route->last_hop,tmp_route->tos);
+				//if( (tmp_route->src_ip != tmp_route->dst_ip)
+						//&& !is_local_ip(tmp_route->src_ip) ){//not self route
+				if(!(tmp_route->self_route || tmp_route->neigh_route)){
+					if(is_local_ip(tmp_route->src_ip)){
+						//Iam the source of route,try to rediscovery
+#ifdef DEBUG2
+						printk("I'm the source of route,insert a RRREQ task in recv hello\n");
+#endif
+						task *new_task;
+						new_task = create_task(TASK_GEN_RRREQ);
+						new_task->src_ip = tmp_route->src_ip;
+						new_task->dst_ip = tmp_route->dst_ip;
+						new_task->tos = tmp_route->tos;
+						insert_task_at_front(new_task);
+					}
+					else{
+						printk("Gen tcnp in recv hello\n");
+						printk("----Last hop:%s in gen_tcnp\n",inet_ntoa(tmp_route->last_hop));
+						if(tmp_route->last_hop!=g_null_ip)
+							gen_tcnp(tmp_route->src_ip,tmp_route->dst_ip,tmp_route->last_hop,tmp_route->tos);
+					}
+					
 				}
 
 				tmp_route = tmp_route->next;

@@ -88,6 +88,22 @@ void aodv(void) {
 			//takes a different action depending on what type of event is recieved
 			switch (tmp_task->type) {
 
+#ifdef RRediscovery
+			case TASK_RECV_TCNP:
+				recv_tcnp(tmp_task);
+				kfree(tmp_task->data);
+				break;
+
+			case TASK_GEN_RRREQ:
+				gen_rreq(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos,1);
+				break;
+			
+			case TASK_GEN_RRREP:
+printk("Got TASK_GEN_RRREP\n");
+				gen_rrep(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos,1);
+				break;
+				
+#endif
 			//route neighbor
 			case TASK_ROUTE_NEIGH:
 				route_neigh(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos);
@@ -97,7 +113,7 @@ void aodv(void) {
 			case TASK_DTN_HELLO:
 				inet_aton("127.127.127.127",&dst);
 				//extern u_int32_t dtn_hello_ip;
-				gen_rreq(g_mesh_ip,dst,tmp_task->tos);
+				gen_rreq(g_mesh_ip,dst,tmp_task->tos,0);
 #ifdef CaiDebug
 				printk("-------DTN HELLO TASK---------\n");
 #endif
@@ -185,7 +201,7 @@ printk("get NEIGHBOR TASH,delete neigh2h %s\n",inet_ntoa(tmp_task->src_ip));
 				break;
 
 			case TASK_SEND_RREP:
-				gen_rrep(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos);
+				gen_rrep(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos,0);
 				break;
 
 			case TASK_RECV_STRREQ:
@@ -198,7 +214,7 @@ printk("get NEIGHBOR TASH,delete neigh2h %s\n",inet_ntoa(tmp_task->src_ip));
 				break;
 
 			case TASK_GEN_RREQ:
-				gen_rreq(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos);
+				gen_rreq(tmp_task->src_ip, tmp_task->dst_ip, tmp_task->tos,0);
 				break;
 
 			default:

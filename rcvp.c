@@ -80,6 +80,8 @@ int gen_rcvp(u_int32_t dst_ip){
 #endif
 
                 //将通路包沿断路表里的上一跳发回给源节点
+		aodv_neigh* tmp_neigh = find_aodv_neigh(last_hop);
+		aodv_dev *lastdev = get_netdev_by_name(tmp_neigh->dev);
                 send_message(tmp_link->last_hop, NET_DIAMETER, tmp_rcvp,sizeof(rcvp),NULL);
                 kfree(tmp_rcvp);
             }

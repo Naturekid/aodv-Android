@@ -29,14 +29,16 @@ int onehop_repair(u_int32_t neigh_name,u_int32_t neigh_ip)
 {
 	aodv_neigh *tmp_neigh = get_other_link2neigh(neigh_name,neigh_ip);
 
-printk("-------------001-----------\n");
 	aodv_route *tmp_route;
 	src_list_entry *tmp_src_entry;
 	int error;
 	if(tmp_neigh==NULL)
+	{
+		printk("No other link,gen rerr.\n");
 		gen_rerr(neigh_ip);
+	}
 	else{
-printk("-------------000-----------\n");
+
 #ifdef DEBUG2
 char nn[20];
 char ni[20];
@@ -49,11 +51,11 @@ printk("------neigh_name:%s,neigh_ip:%s,new next_hop:%s-------\n",nn,ni,nnh);
 		tmp_route = first_aodv_route();
 
 		while (tmp_route != NULL) {
-printk("-------------0-----------\n");	
+
+
 			if ((tmp_route->next_hop == neigh_ip) && (!tmp_route->self_route)&& (!tmp_route->neigh_route))
 			{
-				
-printk("-------------1-----------\n");				
+			
 				tmp_src_entry = find_src_list_entry(tmp_route->src_ip);
 	 			if (tmp_src_entry == NULL)
 					return 0;
@@ -66,7 +68,7 @@ printk("-------------1-----------\n");
 			 		printk ("Error sending with rtnetlink - Delete Route - err no: %d in rerr\n", error);
 			 	return 0;
 				}
-printk("-------------2-----------\n");	
+
 				tmp_route->next_hop = tmp_neigh->ip;
 				tmp_route->lifetime = getcurrtime() + DELETE_PERIOD;
 				tmp_route->state = ACTIVE;
@@ -76,7 +78,7 @@ printk("-------------2-----------\n");
 			 				tmp_route->tos, tmp_route->src_ip, tmp_route->dst_ip,
 			 				tmp_route->next_hop, tmp_route->dev->index,
 			 				tmp_route->num_hops);
-printk("-------------3-----------\n");	
+
 				if (error < 0) {
 			 		printk ("Error sending with rtnetlink - Add Route - err no: %d in rerr\n", error);
 					gen_rerr(neigh_ip);
@@ -100,6 +102,8 @@ int gen_rerr(u_int32_t brk_dst_ip) {
 
 	//�ҵ���һ��aodv·��
 	tmp_route = first_aodv_route();
+
+printk("  --gen_rerr--  \n");
 
 	//go through list
 	//����������һ��Ϊbrk_dst_ip��·����Ŀ�������ýڵ㷢��rerr����Ч����·��
@@ -307,8 +311,8 @@ int recv_rerr(task * tmp_packet) {
 	tmp_rerr = (rerr *) tmp_packet->data;
 	num_hops = tmp_rerr->num_hops+1;
 
-#ifdef CaiDebug
-	printk("Recieved a route error from %s\n", inet_ntoa(tmp_packet->src_ip));
+#ifdef DEBUG2
+	printk("	Recieved a route error from %s\n", inet_ntoa(tmp_packet->src_ip));
 #endif
 
 #ifdef DTN
