@@ -125,7 +125,6 @@ int delete_aodv_neigh(u_int32_t ip) {
 			onehop_repair(tmp_neigh->neigh_name,ip);
 printk("try one hop repair\n");
 			kfree(tmp_neigh);
-printk("--------------------\n");
 			//gen_rerr(ip);
 			return 0;
 
@@ -155,6 +154,7 @@ void cleanup_neigh_routes() {
 //change at 20141219 by cai
 	for(i=1;i<=local_ip_list[0];i++)
 {
+printk("%d	%d\n",i,local_ip_list[i]);
 	tmp_src_entry = find_src_list_entry(local_ip_list[i]);
 	if (tmp_src_entry == NULL)
 		continue;//return;
@@ -174,7 +174,7 @@ void cleanup_neigh_routes() {
 		}
 		
 		tmp_route = find_aodv_route(local_ip_list[i], tmp_neigh->ip, 0);
-		if (tmp_route)
+		if (tmp_route!=NULL)
 			remove_aodv_route(tmp_route);
 		
 		tmp_neigh = tmp_neigh->next;
