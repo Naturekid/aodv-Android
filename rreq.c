@@ -30,7 +30,7 @@ int recv_rreq(task * tmp_packet) {
 	tmp_rreq = tmp_packet->data;
 	convert_rreq_to_host(tmp_rreq);
 
-#ifdef DEBUGC
+#ifdef DEBUG
 	//test:if we can get dev via task
 	struct net_device *task_dev;
 	task_dev = tmp_packet->dev;
@@ -67,6 +67,7 @@ int recv_rreq(task * tmp_packet) {
 	update_timer_queue();
 	tmp_neigh->lifetime = HELLO_INTERVAL * (1 + ALLOWED_HELLO_LOSS) + 20
 			+ getcurrtime();
+
 	//20141130
 	//if (g_mesh_ip == tmp_rreq->src_ip) {
 	if(is_local_ip(tmp_rreq->src_ip)){
@@ -108,10 +109,69 @@ int recv_rreq(task * tmp_packet) {
 		//number of hops
 		tmp_rreq->path_metric =tmp_rreq->num_hops;
 
-	
+	//20141223
+	//if I'm the dst of the rreq and the rediscovery is set 1,compare the hop_nums in rreq and the one of route.And set the smaller as a better route.
+	if(iam_destination && tmp_rreq->rediscovery==1)
+	{
+#ifdef DEBUG2
+		printk("====I'm dst & the rd is 1 in recv_rreq.====\n");
+
+		aodv_route* t_route = first_aodv_route();
+		char src[20];
+		char dst[20];
+		char next[20];
+		//char last[20];
+		while(t_route){
+			strcpy(src,inet_ntoa(t_route->src_ip));
+			strcpy(dst,inet_ntoa(t_route->dst_ip));
+			strcpy(next,inet_ntoa(t_route->next_hop));
+			printk("t_route src:%s   dst:%s    next:%s\n",src,dst,next);
+			t_route = t_route->next;
+		}
+#endif
+		aodv_route *tmp_route = find_aodv_route(tmp_rreq->src_ip, tmp_rreq->dst_ip, tmp_rreq->tos);
+
+		if(tmp_route!=NULL)
+		{
+printk("-----the next hop of exiting route is %s----\n",inet_ntoa(tmp_route->next_hop));		
+			if(tmp_rreq->num_hops>=tmp_route->num_hops)
+			{
+#ifdef DEBUG2
+				printk("====It's not a better route,discard it in rrreq.====\n");
+#endif
+				return 0;
+			}
+#ifdef DEBUG2
+			else
+				printk("====It's  a better route.====\n");
+		}
+#endif		
+	}//if(iam_destination && tmp_rreq->rediscovery==1)
+
 	if (rreq_aodv_route(tmp_rreq->dst_ip, tmp_rreq->src_ip, tmp_rreq->tos,
 			tmp_neigh, tmp_rreq->num_hops, tmp_rreq->dst_seq, tmp_packet->dev,
-			tmp_rreq->path_metric)) {
+			tmp_rreq->path_metric,tmp_rreq->rediscovery)) {
+			
+		if(tmp_rreq->rediscovery==1 && iam_destination)
+		{
+#ifdef DEBUG2
+			printk("----Both the rediscovery and iam_dst are 1,and it's a better route,gen rrrep!----\n");
+#endif
+			if (!find_timer(tmp_rreq->src_ip, tmp_rreq->dst_ip, tmp_rreq->tos,
+					TASK_GEN_RRREP)) {
+				task *new_task;
+				new_task = create_task(TASK_GEN_RRREP);
+				new_task->src_ip = tmp_rreq->src_ip;
+				new_task->dst_ip = tmp_rreq->dst_ip;
+				new_task->tos = tmp_rreq->tos;
+				insert_task_at_front(new_task);
+				//insert_timer_directional(TASK_GEN_RRREP, RREP_TIMER, 0,
+				//		tmp_rreq->src_ip, tmp_rreq->dst_ip, tmp_rreq->tos);
+				update_timer_queue();
+			}
+			return 0;		
+		}
+
 
 		if (iam_destination) {
 
@@ -206,6 +266,10 @@ int resend_rreq(task * tmp_packet) {
 	out_rreq->path_metric = 0;
 	out_rreq->tos = tmp_packet->tos;
 
+#ifdef RRediscovery
+	out_rreq->rediscovery = 0;
+#endif
+
 #ifdef DTN_HELLO
 		out_rreq->dttl = 0;
 #endif 
@@ -237,8 +301,11 @@ int resend_rreq(task * tmp_packet) {
  ----------------------------------------------------
  Generates a RREQ! wahhooo!
  ****************************************************/
-int gen_rreq(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
+//the new parameter r means that the rreq is a rediscovery rreq.
+//when recevice a rreq whose rediscovery is set to be 1,don't return rrep spilt of having route
+int gen_rreq(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos, u_int8_t rd) {
 	rreq *out_rreq;
+
 	u_int8_t out_ttl;
 	flow_type *new_flow;
 
@@ -257,6 +324,7 @@ int gen_rreq(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 	extern u_int32_t dtn_hello_ip;
 	u_int8_t dttl=0;
 	if(dst_ip == dtn_hello_ip)
+
 	{	
 		dttl = DTTL;
 		//printk("It's a DTN hello!\n");
@@ -315,12 +383,22 @@ int gen_rreq(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 	out_rreq->g = 0;
 	out_rreq->path_metric = 0;
 	out_rreq->tos = tos;
+#ifdef RRediscovery
+	out_rreq->rediscovery = rd;
+printk("-----rd is %d in gen_rreq-----\n",rd);
+#endif
 #ifdef DTN_HELLO
 	out_rreq->dttl = dttl;
 #endif
 
 	convert_rreq_to_network(out_rreq);
 	local_broadcast(out_ttl, out_rreq, sizeof(rreq),NULL);
+	if(out_rreq->rediscovery == 1)//if it's a rediscovery rreq,don't resend rreq
+	{
+		kfree(out_rreq);
+
+		return 1;
+	}
 	insert_timer_directional(TASK_RESEND_RREQ, 0, RREQ_RETRIES, src_ip,
 			dst_ip, tos);
 	update_timer_queue();

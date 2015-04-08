@@ -48,31 +48,31 @@ int recv_rrep(task * tmp_packet) {
 	}
 
 	//Update neighbor timelife
-		delete_timer(tmp_neigh->ip, tmp_neigh->ip, NO_TOS, TASK_NEIGHBOR);
-		insert_timer_simple(TASK_NEIGHBOR, HELLO_INTERVAL
+	delete_timer(tmp_neigh->ip, tmp_neigh->ip, NO_TOS, TASK_NEIGHBOR);
+	insert_timer_simple(TASK_NEIGHBOR, HELLO_INTERVAL
 				* (1 + ALLOWED_HELLO_LOSS) + 100, tmp_neigh->ip);
-		update_timer_queue();
-		tmp_neigh->lifetime = HELLO_INTERVAL * (1 + ALLOWED_HELLO_LOSS) + 20
+	update_timer_queue();
+	tmp_neigh->lifetime = HELLO_INTERVAL * (1 + ALLOWED_HELLO_LOSS) + 20
 				+ getcurrtime();
 	tmp_rrep->num_hops++;
 
-#ifdef DEBUG2
+#ifdef DEBUG
 
 	strcpy(src_ip, inet_ntoa(tmp_rrep->src_ip));
 	strcpy(dst_ip, inet_ntoa(tmp_rrep->dst_ip));
 
 	printk("received new rrep from %s to %s with ToS: %u - last hop: %s\n", dst_ip, src_ip, tmp_rrep->tos, inet_ntoa(tmp_packet->src_ip));
-	printk("g_mesh_ip is %s\n", inet_ntoa(g_mesh_ip));
+	
 #endif
 
 	if( is_local_ip(tmp_rrep->src_ip) || ( tmp_rrep->src_ip == g_null_ip && is_local_ip(tmp_rrep->gateway) ))
 	//if (tmp_rrep->src_ip == g_mesh_ip || (tmp_rrep->src_ip == g_null_ip && tmp_rrep->gateway == g_mesh_ip))
 		iam_destination = 1;
-//printk("--------------rrep:%s--------------\n",inet_ntoa(tmp_rrep->src_ip));
+
 	if (iam_destination) { //I'm the source of the flow (the destination of the RREP)
 
 #ifdef DEBUG2
-		printk("I'm the source of the flow (the destination of the RREP)\n");
+		printk("	I'm the source of the flow (the destination of the RREP)\n");
 #endif
 		
 
@@ -81,9 +81,8 @@ int recv_rrep(task * tmp_packet) {
 		//Create (or update) the first hop of the route
 
 		rreq_aodv_route(tmp_rrep->src_ip, tmp_rrep->dst_ip, tmp_rrep->tos, tmp_neigh, tmp_rrep->num_hops,
-				tmp_rrep->dst_seq, tmp_packet->dev, path_metric);
+				tmp_rrep->dst_seq, tmp_packet->dev, path_metric, tmp_rrep->rediscovery);
 
-		
 		send_route = find_aodv_route_by_id(tmp_rrep->dst_ip, tmp_rrep->dst_seq);
 		delete_timer(tmp_rrep->src_ip, tmp_rrep->dst_ip, tmp_rrep->tos,
 					TASK_RESEND_RREQ);
@@ -96,6 +95,36 @@ int recv_rrep(task * tmp_packet) {
 		}
 
 		rrep_aodv_route(send_route);
+
+#ifdef RRediscovery
+		//if the tmp_rrep->rediscovery is 1,delete the old route
+		if(tmp_rrep->rediscovery==1)
+		{
+			aodv_route *old_route = find_aodv_route(tmp_rrep->src_ip, tmp_rrep->dst_ip, tmp_rrep->tos);
+#ifdef DEBUG2
+char s[20];
+char d[20];
+char n[20];
+strcpy(s,inet_ntoa(old_route->src_ip));
+strcpy(d,inet_ntoa(old_route->dst_ip));
+strcpy(n,inet_ntoa(old_route->next_hop));
+printk("=====src:%s dst:%s next:%s r:%d tos:%d====\n",s,d,n,old_route->rediscovery,old_route->tos);
+#endif	
+			if(old_route!=NULL && old_route!=send_route && old_route->rediscovery!=1)
+			{
+				printk("hahahahahahha\n");
+				remove_aodv_route(old_route);
+			}
+#ifdef DEBUG2
+strcpy(s,inet_ntoa(old_route->src_ip));
+strcpy(d,inet_ntoa(old_route->dst_ip));
+strcpy(n,inet_ntoa(old_route->next_hop));
+printk("=====src:%s dst:%s next:%s tos:%d====\n",s,d,n,send_route->tos);
+#endif			
+			send_route->rediscovery = 1;
+		}
+#endif
+
 #ifdef 	DEBUG2
 //strcpy(dst_ip,send_route->);
 //strcpy();
@@ -103,7 +132,9 @@ int recv_rrep(task * tmp_packet) {
 #endif
 printk("------------rrep_aodv_route in recv_rrep------------\n");
 		//1130 to be modified.NOW can't ensure is OK or not when DTN HELLO
-		send_route->last_hop = g_mesh_ip;
+		//1225 binding it to the income dev ip
+		aodv_dev *tmp_dev = get_netdev_by_name(tmp_packet->dev->name);		
+		send_route->last_hop = tmp_dev->ip;//g_mesh_ip;
 
 #ifdef DTN_HELLO
 		if(tmp_rrep->dttl!=NULL && tmp_rrep->dttl>0){//I'm the src of dtn hello,& notice DTN the neighbor node
@@ -195,23 +226,19 @@ printk("no brk links to this dst\n");
 				tmp_rrep->dttl = tmp_rrep->dttl - 1;
 			}
 			
-#ifdef CaiDebug
+#ifdef DEBUG2
 	printk("rrep:dttl:%d\n",tmp_rrep->dttl);
 	aodv_route *tmp_route;
 	tmp_route = first_aodv_route();
 	char src[20];
 	char dst[20];
-	char nex[20];
+	char next[20];
+	char last[20];
 	strcpy(src,inet_ntoa(recv_route->src_ip));
 	strcpy(dst,inet_ntoa(recv_route->dst_ip));
-	strcpy(nex,inet_ntoa(recv_route->next_hop));
-	printk("recv:%s---%s---%s\n",src,dst,nex);
-	while(tmp_route){
-		strcpy(src,inet_ntoa(tmp_route->src_ip));
-		strcpy(dst,inet_ntoa(tmp_route->dst_ip));
-		printk("tmp_route src:%s   dst:%s\n",src,dst);
-		tmp_route = tmp_route->next;
-	}
+	strcpy(next,inet_ntoa(recv_route->next_hop));
+	strcpy(last,inet_ntoa(send_route->last_hop));
+	printk("send:%s---%s---%s---%s\n",src,dst,next,last);
 #endif
 			
 		}//dttl
@@ -230,7 +257,7 @@ printk("no brk links to this dst\n");
 		//Create (or update) the route from source to destination
 		rreq_aodv_route(tmp_rrep->src_ip, tmp_rrep->dst_ip, tmp_rrep->tos,
 				tmp_neigh, tmp_rrep->num_hops,
-				tmp_rrep->dst_seq, tmp_packet->dev, path_metric);
+				tmp_rrep->dst_seq, tmp_packet->dev, path_metric,tmp_rrep->rediscovery);
 
 		send_route = find_aodv_route_by_id(tmp_rrep->dst_ip, tmp_rrep->dst_seq);
 
@@ -247,28 +274,22 @@ printk("no brk links to this dst\n");
 			return 0;
 		}
 
-#ifdef DEBUG2`
+#ifdef DEBUG2
 	aodv_route *tmp_route;
 	tmp_route = first_aodv_route();
 	char src[20];
 	char dst[20];
-	char nex[20];
+	char next[20];
+	char last[20];
 	strcpy(src,inet_ntoa(send_route->src_ip));
 	strcpy(dst,inet_ntoa(send_route->dst_ip));
-	strcpy(nex,inet_ntoa(send_route->next_hop));
-	printk("send:%s---%s---%s\n",src,dst,nex);
-	while(tmp_route){
-		strcpy(src,inet_ntoa(tmp_route->src_ip));
-		strcpy(dst,inet_ntoa(tmp_route->dst_ip));
-		printk("tmp_route src:%s   dst:%s\n",src,dst);
-		tmp_route = tmp_route->next;
-
-	}
+	strcpy(next,inet_ntoa(send_route->next_hop));
+	strcpy(last,inet_ntoa(send_route->last_hop));
+	printk("intermediate send:%s---%s---%s---%s---%d\n",src,dst,next,last,send_route->rediscovery);
 #endif
 		rrep_aodv_route(recv_route);
-printk("---------rrep 7---------\n");
 		rrep_aodv_route(send_route);
-printk("---------rrep 8---------\n");
+
 		send_route->last_hop = recv_route->next_hop;
 		recv_route->last_hop = send_route->next_hop;
 
@@ -281,12 +302,12 @@ printk("---------end in recv rrep----------\n");
 	return 0;
 }
 
-int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
+int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos, u_int8_t rd) {
 	aodv_route *src_route;
 	rrep *tmp_rrep;
 
 
-#ifdef DEBUG2
+#ifdef DEBUG
 	char src[16];
 	char dst[16];
 	strcpy (src, inet_ntoa(src_ip));
@@ -302,6 +323,29 @@ int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 	}
 
 	src_route = find_aodv_route(dst_ip, src_ip, tos);
+#ifdef RRediscovery
+//If rd is 1,we should find the route with rediscovery set
+	if(rd==1)
+	{
+#ifdef DEBUG2
+		printk("It's a rrrep.......\n");
+#endif
+		//if the r route is a better route,delete the first return src_route and replace it.
+		if(src_route->rediscovery!=1)
+		{
+#ifdef DEBUG2
+		printk("src_route is not a rediscovery route.......\n");
+#endif
+			aodv_route *p = find_rediscovery_aodv_route(src_ip, dst_ip, tos);
+			if( (p!=NULL) && (src_route->num_hops > p->num_hops) )
+			{
+				remove_aodv_route(src_route);
+				p->rediscovery==0;
+			}
+		}
+		else src_route->rediscovery==0;
+	}
+#endif
 	/* Get the source and destination IP address from the RREQ */
 	if (!src_route) { //symmetric
 #ifdef DEBUG
@@ -387,6 +431,10 @@ int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 	tmp_rrep->q=0;
 	tmp_rrep->path_metric = src_route->path_metric;
 
+#ifdef RRediscovery
+	tmp_rrep->rediscovery = rd;
+#endif
+
 
 
 	//Update the route to REPLIED state
@@ -400,9 +448,18 @@ int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 
 
 	convert_rrep_to_network(tmp_rrep);
-printk("src_route->dev is %s in recv_rrep\n",src_route->dev->name);
+//printk("src_route->dev is %s in recv_rrep\n",src_route->dev->name);
 	send_message(src_route->next_hop, NET_DIAMETER, tmp_rrep, sizeof(rrep),src_route->dev);
 	kfree(tmp_rrep);
+#ifdef 	DEBUG2
+char src[20];
+char dst[20];
+char nex[20];
+strcpy(src,inet_ntoa(src_route->src_ip));
+strcpy(dst,inet_ntoa(src_route->dst_ip));
+strcpy(nex,inet_ntoa(src_route->next_hop));
+printk("---------src:%s  dst:%s  nex:%s end in gen_rrep----------\n",src,dst,nex);
+#endif
 	return 1;
 
 }
