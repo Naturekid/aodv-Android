@@ -69,7 +69,7 @@
 #include <net/route.h>
 
 
-#define TCNP
+#define RRediscovery
 
 #define MN_NODE   100
 #define WDN_NODE  101
@@ -212,8 +212,10 @@
 #define TASK_RECV_RCVP  122
 #define RRDP_MESSAGE    123
 #define TASK_RECV_RRDP  123
-#define TASK_GEN_RRRP	133
-#define TASK_RECV_TCNP 	134
+#define TASK_GEN_RRREQ	133
+#define TASK_GEN_RRREP	134
+#define TCNP_MESSAGE 	135
+#define TASK_RECV_TCNP 	135
 #define TASK_ROUTE_NEIGH	127
 
 
@@ -348,6 +350,11 @@ typedef struct {
 	u_int8_t dttl;//used to find DTN neighbor
 #endif
 
+//20141222
+#ifdef RRediscovery
+	u_int8_t rediscovery :1;
+#endif
+
 } rreq;
 //
 
@@ -382,6 +389,10 @@ typedef struct {
 	u_int8_t dttl;//used to find DTN neighbor
 	u_int32_t x;
 	u_int32_t y;
+#endif
+//20141222
+#ifdef RRediscovery
+	u_int8_t rediscovery :1;
 #endif
 
 } rrep;
@@ -509,26 +520,6 @@ typedef struct {
 	unsigned char tos;
 } rrdp;
 
-//Route Redirection Packet
-typedef struct {
-
-	u_int8_t type;
-	u_int8_t num_hops;
-#ifdef __BIG_ENDIAN_BITFIELD
-	unsigned int n:1;
-	unsigned int reserved:7;
-#elif defined __LITTLE_ENDIAN_BITFIELD
-	unsigned int reserved :7;
-	unsigned int n :1;
-#else
-	//#error "Please fix <asm/byteorder.h>"
-#endif
-	unsigned int dst_count :8;
-	u_int32_t dst_ip;
-	//u_int32_t dst_seq;	
-	u_int32_t src_ip;
-	unsigned char tos;
-} rrrp;
 
 //Break Link Entry
 struct _brk_link {
@@ -552,6 +543,30 @@ struct _brk_link {
 typedef struct _brk_link brk_link;
 //
 #endif
+
+#ifdef RRediscovery
+//Topology change notification packet
+typedef struct{
+
+	u_int8_t type;
+	u_int8_t num_hops;
+#ifdef __BIG_ENDIAN_BITFIELD
+	unsigned int n:1;
+	unsigned int reserved:7;
+#elif defined __LITTLE_ENDIAN_BITFIELD
+	unsigned int reserved :7;
+	unsigned int n :1;
+#else
+	//#error "Please fix <asm/byteorder.h>"
+#endif
+	unsigned int dst_count :8;
+	u_int32_t dst_ip;
+	//u_int32_t dst_seq;	
+	u_int32_t src_ip;
+	unsigned char tos;
+}tcnp;
+#endif
+
 
 /*
 //MCC - ETT Metric Implementation Messages
@@ -671,6 +686,9 @@ struct _aodv_route {
 	u_int8_t self_route :1;
 	u_int8_t state :2;
 
+#ifdef RRediscovery
+	u_int8_t rediscovery :1;
+#endif
 	struct _aodv_dev *dev;
 
 	struct _aodv_route *next;
@@ -827,14 +845,9 @@ struct services {
 #include "tos.h"
 #include "aodv_config.h"
 //#ifdef RECOVERYPATH
-
 #include "brk_list.h"
 #include "rcvp.h"
-
 #include "tcnp.h"
-
-
-
 //#endif
 
 #endif
