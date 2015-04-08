@@ -493,6 +493,7 @@ static void __exit cleanup_fbaodv_module(void)
 	printk("Cleaned up AODV Queues...\n");
 
 	cleanup_neigh_routes();
+printk("Cleaned up AODV Neighboor Routes...\n");
 	cleanup_aodv_route_table();
 printk("Cleaned up AODV Route Table...\n");
 	flush_src_list();

@@ -176,18 +176,10 @@ int recv_hello(task * tmp_packet) {
 	aodv_neigh *hello_orig;
 	hello * tmp_hello;
 	hello_extension *tmp_hello_extension;
+	aodv_route *tmp_route;
 	int i;
 	u_int8_t load = 0;
 	u_int16_t load_seq = 0;
-/*
-#ifdef DEBUGC
-	//test:if we can get dev via task
-	struct net_device *task_dev;
-	task_dev = tmp_packet->dev;
-	if(task_dev)
-	printk("get dev %s from task\n",task_dev->name);
-#endif
-*/
 
 	tmp_hello= (hello *)tmp_packet->data;
 	tmp_hello_extension = (hello_extension *) ((void*)tmp_packet->data
@@ -291,11 +283,10 @@ int recv_hello(task * tmp_packet) {
 
 		/*********************manage route redirection*********************/
 		
-		aodv_route *tmp_route;
 		tmp_route = first_aodv_route();
 		while(tmp_route && tmp_route->state != INVALID){
 			if( (tmp_route->src_ip != tmp_route->dst_ip)
-					&&(tmp_route->src_ip !=g_mesh_ip) ){//not self route
+					&& !is_local_ip(tmp_route->src_ip) ){//not self route
 
 				gen_rrdp(tmp_route->src_ip,tmp_route->dst_ip,
 						tmp_route->last_hop,tmp_route->tos);
@@ -305,7 +296,7 @@ int recv_hello(task * tmp_packet) {
 #ifdef DTN
 
 			extern int dtn_register;
-			if( (tmp_route->src_ip == g_mesh_ip) && dtn_register 
+			if( is_local_ip(tmp_route->src_ip) && dtn_register 
 					&& (tmp_route->src_ip != tmp_route->dst_ip) ){//I'm the source,tell DTN
 
 				u_int32_t para[4];
@@ -326,6 +317,25 @@ int recv_hello(task * tmp_packet) {
 		
 #endif
 
+		
+#ifdef	TCNP
+//tcnp means Topology Change Notification Packet
+		if(tmp_hello->node_type == WDN_NODE || tmp_hello->node_type==ICN_NODE){
+			tmp_route = first_aodv_route();
+			while(tmp_route && tmp_route->state != INVALID){
+				if( (tmp_route->src_ip != tmp_route->dst_ip)
+					&& !is_local_ip(tmp_route->src_ip) ){//not self route
+
+					gen_tcnp(tmp_route->src_ip,tmp_route->dst_ip,tmp_route->last_hop,tmp_route->tos);
+				}
+
+				tmp_route = tmp_route->next;
+			}
+		}
+
+		
+
+#endif
 
 
 

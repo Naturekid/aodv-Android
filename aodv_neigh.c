@@ -120,8 +120,13 @@ int delete_aodv_neigh(u_int32_t ip) {
 			//		if (tmp_route)
 			//			remove_aodv_route(tmp_route);      
 
+			
+//20141213 try to repair one hop link before gen_rerr
+			onehop_repair(tmp_neigh->neigh_name,ip);
+printk("try one hop repair\n");
 			kfree(tmp_neigh);
-			gen_rerr(ip);
+printk("--------------------\n");
+			//gen_rerr(ip);
 			return 0;
 
 		}
@@ -147,11 +152,14 @@ void cleanup_neigh_routes() {
 
 	extern u_int32_t local_ip_list[10];
 	int i = 1;
-	for(i=1;i<local_ip_list[0];i++)
+//change at 20141219 by cai
+	for(i=1;i<=local_ip_list[0];i++)
 {
 	tmp_src_entry = find_src_list_entry(local_ip_list[i]);
 	if (tmp_src_entry == NULL)
-		return;
+		continue;//return;
+
+	tmp_neigh = aodv_neigh_list;
 
 	while (tmp_neigh) {
 
@@ -168,7 +176,6 @@ void cleanup_neigh_routes() {
 		tmp_route = find_aodv_route(local_ip_list[i], tmp_neigh->ip, 0);
 		if (tmp_route)
 			remove_aodv_route(tmp_route);
-		
 		
 		tmp_neigh = tmp_neigh->next;
 	}
@@ -411,6 +418,19 @@ aodv_neigh *get_better_link(aodv_neigh *cur_neigh)
 	return NULL;
 }
 
+aodv_neigh* get_other_link2neigh(u_int32_t neigh_name,u_int32_t neigh_ip)
+{
+	aodv_neigh *tmp_neigh = aodv_neigh_list;
+	while(tmp_neigh)
+	{	
+		if( (tmp_neigh->neigh_name==neigh_name)&&(tmp_neigh->ip!=neigh_ip) )
+			return tmp_neigh;
+		tmp_neigh = tmp_neigh->next;
+	}
+	return NULL;
+}
+
+/*
 aodv_neigh *find_neigh_by_name(u_int32_t name)
 {
 	aodv_neigh *tmp_neigh = aodv_neigh_list;
@@ -421,7 +441,8 @@ aodv_neigh *find_neigh_by_name(u_int32_t name)
 		tmp_neigh = tmp_neigh->next;
 	}
 	return NULL;
-}
+}*/
+
 
 
 

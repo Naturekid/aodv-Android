@@ -160,8 +160,9 @@ void aodv(void) {
 				break;
 
 			case TASK_NEIGHBOR:
-			//printk("get NEIGHBOR TASH,delete neigh %s\n",inet_ntoa(tmp_task->src_ip));
+			printk("get NEIGHBOR TASH,delete neigh %s\n",inet_ntoa(tmp_task->src_ip));
 			delete_aodv_neigh(tmp_task->src_ip);
+printk("delete aodv neigh in thread\n");
 				break;
 
 			case TASK_ROUTE_CLEANUP:
@@ -169,6 +170,7 @@ void aodv(void) {
 				break;
 
 			case TASK_NEIGHBOR_2H:
+printk("get NEIGHBOR TASH,delete neigh2h %s\n",inet_ntoa(tmp_task->src_ip));
 				delete_aodv_neigh_2h(tmp_task->src_ip);
 				break;
 

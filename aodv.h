@@ -69,6 +69,8 @@
 #include <net/route.h>
 
 
+#define TCNP
+
 #define MN_NODE   100
 #define WDN_NODE  101
 #define ICN_NODE  110
@@ -78,12 +80,11 @@
 #define TASK_DTN_HELLO        121
 #define DTN_HELLO
 //remove it when test end,in aodv.h, aove_thread.c , task_queue.c
-#define RECOVERYPATH 
+//#define RECOVERYPATH 
 #define DTN
 //#define DEBUG
 //#define CaiDebug
 #define DEBUGC
-//#define DEBUG0
 #define DEBUG2
 #define extention               667
 #define DTNREGISTER		9999
@@ -211,7 +212,10 @@
 #define TASK_RECV_RCVP  122
 #define RRDP_MESSAGE    123
 #define TASK_RECV_RRDP  123
+#define TASK_GEN_RRRP	133
+#define TASK_RECV_TCNP 	134
 #define TASK_ROUTE_NEIGH	127
+
 
 //ST-AODV
 #define TASK_ST             106
@@ -504,6 +508,27 @@ typedef struct {
 	u_int32_t src_ip;
 	unsigned char tos;
 } rrdp;
+
+//Route Redirection Packet
+typedef struct {
+
+	u_int8_t type;
+	u_int8_t num_hops;
+#ifdef __BIG_ENDIAN_BITFIELD
+	unsigned int n:1;
+	unsigned int reserved:7;
+#elif defined __LITTLE_ENDIAN_BITFIELD
+	unsigned int reserved :7;
+	unsigned int n :1;
+#else
+	//#error "Please fix <asm/byteorder.h>"
+#endif
+	unsigned int dst_count :8;
+	u_int32_t dst_ip;
+	//u_int32_t dst_seq;	
+	u_int32_t src_ip;
+	unsigned char tos;
+} rrrp;
 
 //Break Link Entry
 struct _brk_link {
@@ -805,6 +830,8 @@ struct services {
 
 #include "brk_list.h"
 #include "rcvp.h"
+
+#include "tcnp.h"
 
 
 

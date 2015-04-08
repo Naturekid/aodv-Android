@@ -5,7 +5,7 @@
     copyright            : (C) 2014 by Cai Bingying
     email                :
  ***************************************************************************/
-//#ifdef RECOVERYPATH
+#ifdef RECOVERYPATH
 
 #ifndef BRK_LIST_H
 #define BRK_LIST_H
@@ -46,5 +46,5 @@ int flush_brk_list(void);
 //int is_overlapped_with_brk_link(aodv_route *tmp_route);
 
 #endif
-//#endif
+#endif
 

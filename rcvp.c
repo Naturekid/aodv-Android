@@ -5,7 +5,7 @@
     copyright            : (C) 2014 by Cai Bingying
     email                :
  ***************************************************************************/
-//#ifdef RECOVERYPATH
+#ifdef RECOVERYPATH
 #include "rcvp.h"
 
 //manage the recovery path packet
@@ -328,4 +328,4 @@ int recv_rrdp(task *tmp_packet){
 
 
 
-//#endif
+#endif

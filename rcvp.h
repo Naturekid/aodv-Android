@@ -5,7 +5,7 @@
     copyright            : (C) 2014 by Cai Bingying
     email                :
  ***************************************************************************/
-//#ifdef RECOVERYPATH
+#ifdef RECOVERYPATH
 #ifndef RCVP_H
 #define RCVP_H
 
@@ -18,4 +18,4 @@ int gen_rrdp(u_int32_t src_ip,u_int32_t dst_ip,u_int32_t last_hop,unsigned char 
 int recv_rrdp(task *tmp_packet);
 
 #endif
-//#endif
+#endif

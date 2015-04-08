@@ -49,4 +49,16 @@ change "some_ip==g_mesh_ip" to is_local_ip(some_ip) in rreq & rrep
 Change the linaro-kernel code in /net/ipv4/ip_forward.c & mm/slab.c
 The other changes I have forgot
 
+1210
+cleanup_neigh_routes只针对g_mesh_ip处理，若g_mesh_ip未传送数据，则会导致空指针操作，修改。
+
+1213
+add a func to get other link to neigh when a neigh is deleted in aodv_neigh.c.h
+
+1220
+add tcnp.c .h to manage network topoloy change notification packet
+
+1221
+aodv.h add new TASK tcnp & gen rrrp, add tcnp data strcuture
+
 

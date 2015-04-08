@@ -5,7 +5,7 @@
     copyright            : (C) 2014 by Cai Bingying
     email                :
  ***************************************************************************/
-//#ifdef RECOVERYPATH
+#ifdef RECOVERYPATH
  //manage the brk_list
 //处理断路表，添加条目，删除条目，寻找指定条目等
  #include "brk_list.h"
@@ -333,4 +333,4 @@ int flush_brk_list(void) {
 	return 1;
 }
 
-//#endif
+#endif

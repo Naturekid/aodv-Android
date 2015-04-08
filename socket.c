@@ -520,7 +520,7 @@ int send_message(u_int32_t dst_ip, u_int8_t ttl, void *data, const size_t datale
 
 	tmp_dev = out_dev;
 if(sizeof(out_dev)<sizeof(aodv_dev)){
-printk("abdc\n");
+printk("out_dev->name:%s\n",out_dev->dev->name);
 	tmp_dev = get_netdev_by_name(out_dev->name);
 }
 
@@ -634,6 +634,7 @@ int send_ett_probe(u_int32_t dst_ip, void *data1, const size_t datalen1, void *d
 
     len = sock_sendmsg(tmp_dev->sock, &msg1,(size_t) datalen1);
     if (len < 0)
+
     {
         printk("Error sending! err no: %d, Dst: %s\n", len, inet_ntoa(dst_ip));
 	set_fs(oldfs);

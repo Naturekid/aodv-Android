@@ -25,6 +25,73 @@ int reply_to_rrer(u_int32_t source, u_int32_t destination) {
 	return 0;
 }
 
+int onehop_repair(u_int32_t neigh_name,u_int32_t neigh_ip)
+{
+	aodv_neigh *tmp_neigh = get_other_link2neigh(neigh_name,neigh_ip);
+
+printk("-------------001-----------\n");
+	aodv_route *tmp_route;
+	src_list_entry *tmp_src_entry;
+	int error;
+	if(tmp_neigh==NULL)
+		gen_rerr(neigh_ip);
+	else{
+printk("-------------000-----------\n");
+#ifdef DEBUG2
+char nn[20];
+char ni[20];
+char nnh[20];
+strcpy(nn,inet_ntoa(neigh_name));
+strcpy(ni,inet_ntoa(neigh_ip));
+strcpy(nnh,inet_ntoa(tmp_neigh->ip));
+printk("------neigh_name:%s,neigh_ip:%s,new next_hop:%s-------\n",nn,ni,nnh);
+#endif	
+		tmp_route = first_aodv_route();
+
+		while (tmp_route != NULL) {
+printk("-------------0-----------\n");	
+			if ((tmp_route->next_hop == neigh_ip) && (!tmp_route->self_route)&& (!tmp_route->neigh_route))
+			{
+				
+printk("-------------1-----------\n");				
+				tmp_src_entry = find_src_list_entry(tmp_route->src_ip);
+	 			if (tmp_src_entry == NULL)
+					return 0;
+				//delete the old & broken route in kernel
+				error = rpdb_route(RTM_DELROUTE, tmp_src_entry->rt_table,
+			 				tmp_route->tos, tmp_route->src_ip, tmp_route->dst_ip,
+			 				tmp_route->next_hop, tmp_route->dev->index,
+			 				tmp_route->num_hops);
+				if (error < 0) {
+			 		printk ("Error sending with rtnetlink - Delete Route - err no: %d in rerr\n", error);
+			 	return 0;
+				}
+printk("-------------2-----------\n");	
+				tmp_route->next_hop = tmp_neigh->ip;
+				tmp_route->lifetime = getcurrtime() + DELETE_PERIOD;
+				tmp_route->state = ACTIVE;
+				tmp_route->dev = get_netdev_by_name(tmp_neigh->dev->name);
+				//add a new route
+				error = rpdb_route(RTM_NEWROUTE, tmp_src_entry->rt_table,
+			 				tmp_route->tos, tmp_route->src_ip, tmp_route->dst_ip,
+			 				tmp_route->next_hop, tmp_route->dev->index,
+			 				tmp_route->num_hops);
+printk("-------------3-----------\n");	
+				if (error < 0) {
+			 		printk ("Error sending with rtnetlink - Add Route - err no: %d in rerr\n", error);
+					gen_rerr(neigh_ip);
+			 	return 0;
+				}
+
+			
+			}
+			tmp_route = tmp_route->next;
+		}//end while
+	}//end else
+printk("-------------end 1hop repair-----------\n");	
+	return 1;
+
+}
 //brk_dst_ipΪ�ѶϿ���·��Ŀ��ip
 int gen_rerr(u_int32_t brk_dst_ip) {
 	aodv_route *tmp_route;
@@ -41,13 +108,13 @@ int gen_rerr(u_int32_t brk_dst_ip) {
 		//printk("tmp_route->next_hop is %s\n",inet_ntoa(tmp_route->next_hop));
 		if ((tmp_route->next_hop == brk_dst_ip) && (!tmp_route->self_route)&& (!tmp_route->neigh_route)){
 
-			if (!reply_to_rrer(tmp_route->src_ip, tmp_route->dst_ip)) { //i'm source of the route, don't send the rerr
+			if (!reply_to_rrer(tmp_route->src_ip, tmp_route->dst_ip)) { //i'm not the source of the route.if i'm, don't send the rerr
 				if (tmp_route->state != INVALID) {
 
 					if ((tmp_rerr = (rerr *) kmalloc(sizeof(rerr), GFP_ATOMIC))
 							== NULL) {
 #ifdef DEBUG
-						printk("Can't allocate new rrep\n");
+						printk("Can't allocate new rrer\n");
 #endif
 						return 0;
 					}

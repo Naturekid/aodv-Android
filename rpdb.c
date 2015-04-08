@@ -209,10 +209,13 @@ int rpdb_route(unsigned char type, int rt_table, unsigned char tos,
 	}
 
 //1203 modified,trying,not sure
+#ifdef DEBUG2
+printk("the dev ifindex is %d\n",dev_index);
+#endif
 aodv_dev *dev = get_netdev_by_index(dev_index);
 if( dev != NULL )
 { 
-	printk("");	
+	printk("dev not NULL in rpdb route\n");	
 	init_sock(rt_socket,dev->ip,dev);
 }
 else init_sock(rt_socket, g_mesh_ip, g_aodv_dev);

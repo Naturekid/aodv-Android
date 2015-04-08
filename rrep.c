@@ -400,6 +400,7 @@ int gen_rrep(u_int32_t src_ip, u_int32_t dst_ip, unsigned char tos) {
 
 
 	convert_rrep_to_network(tmp_rrep);
+printk("src_route->dev is %s in recv_rrep\n",src_route->dev->name);
 	send_message(src_route->next_hop, NET_DIAMETER, tmp_rrep, sizeof(rrep),src_route->dev);
 	kfree(tmp_rrep);
 	return 1;

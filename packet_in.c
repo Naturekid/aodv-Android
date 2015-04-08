@@ -240,7 +240,7 @@ unsigned int input_handler(unsigned int hooknum, struct sk_buff *skb,
 #endif
 
 #endif
-#ifdef DEBUGC
+#ifdef DEBUG2
 char name[30];
 unsigned char if_port;
 int ifindex;

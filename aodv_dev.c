@@ -22,6 +22,10 @@ extern u_int32_t g_node_name;
 aodv_dev *g_mesh_dev;
 aodv_route *g_local_route;
 aodv_dev *net_dev_list;
+aodv_dev *local_dev;
+
+int init_local_dev(){
+}
 
 aodv_dev *create_aodv_dev(struct net_device *dev) {
 	int error;
@@ -324,7 +328,7 @@ aodv_dev *get_netdev_by_name(char *name)
 {
 	aodv_dev *tmp_dev = net_dev_list;
 	
-	while(tmp_dev)
+	while(tmp_dev!=NULL)
 	{	
 		if(strcmp(tmp_dev->name,name)==0)
 			return tmp_dev;
@@ -337,14 +341,16 @@ aodv_dev *get_netdev_by_name(char *name)
 aodv_dev *get_netdev_by_index(int index)
 {
 	aodv_dev *tmp_dev = net_dev_list;
-	
-	while(tmp_dev)
+printk("------get_netdev_by_index11-------\n");	
+	while(tmp_dev!=NULL)
 	{	
 		if(tmp_dev->index==index)
 			return tmp_dev;
-		tmp_dev = tmp_dev->next;
-	}
 
+		tmp_dev = tmp_dev->next;
+printk("------get_netdev_by_index22-------\n");	
+	}
+printk("------get_netdev_by_index33-------\n");	
 	return NULL;
 }
 
